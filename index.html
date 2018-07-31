@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+		<meta name="description" content="">
+		<meta name="author" content="">
+		<link rel="icon" href="../../favicon.ico">
+
+		<title>MillMeister.io</title>
+	
+		<link rel="stylesheet" href="css/bootstrap.min.css">
+		<link rel="stylesheet" href="css/styles.css">
+		
+	</head>
+	<!-- Intro Header -->
+  	<header class="intro">
+		  <div class="intro-body">
+			  <div class="container">
+              	<div class="row">
+				  	<video poster="img/haas.png" id="bgvid" playsinline autoplay muted loop>
+						<source src="img/haas3g.m4v" type="video/mp4">
+					</video>
+                  	<div class="col-md-8 col-md-offset-2 fadein">
+						  <h1 class="brand-heading stroke">MillMeister.io</h1>
+							<h3> g-code generator for fabricating microfluidic circuits</h3>  
+							<h6 id="versionString"> Version: </h6>
+					</div>
+			  </div><!--/row-->
+			  <div class="row">
+				  <div class="col-md-6 fadein">
+						<a href="#get-started" type="button" class="btn btn-primary btn-lg" id="get-started">Get Started</a>
+					</div>
+					<div class="col-md-6 fadein">
+						<button type="button" class="btn btn-info btn-lg" data-toggle="collapse" href="#collapse1">Learn more...</button>
+					</div>
+				</div><!--/row-->
+				<div class="row">
+					<div id="collapse1" class="panel-collapse collapse">
+        				<div class="panel-body stroke"><h2>MillMeister.io Instructions</h2></div>
+						<div class="panel-footer">
+							<p>MillMeister.io converts dxf files to tool paths for surface milling. Special features 
+							are included to improve milling of microfluidic chips or other high-precision parts.</p>
+							
+							<h4>How to use: </h4>
+							<p><ol>
+							<li> upload a dxf file</li>
+							<li> select and verify job parameters</li> 
+							<li> download the gcode</li>
+							</ol></p>
+							
+							<h4>DXF Format Guidelines: </h4>
+							<p> Currently supported drawing elements are:
+							<ul>
+							<li>Lines</li>
+							<li>Polylines</li>
+							<li>Circles</li>
+							</ul></p>
+							
+							<p>MillMeister.io processes the dxf file layer by layer and assigns each layer an operation number, tool number, depth (z) and feed rates (x,y,z).
+							For every layer in the drawing, it will produce gcode for that tool, cutting all the features in that layer to the specified depth (z) 
+							at the specified feed rates (x,y,z).
+							<ul>
+							<li>Lines and polylines are milled</li>
+							<li>Circles are drilled</li>
+							</ul></p>
+							
+							<p>Cutting parameters, including tool type and depth of cut, 
+							can be automatically populated by naming drawing layers with the format:</p>
+							<p> &lt Ignored &gt &lt Tool Diameter &gt &lt Tool Type &gt  ... &lt "Z" &gt &lt Depth of Cut &gt </p>
+							<p> For example, a layer named <strong>"Pattern 0.75mm Endmill Z 1.0mm"</strong>
+							will automatically generate process parameters that assume the layer 
+							contains endmill operations to a depth of 1.0mm. Naming layers with this format is not mandatory, and
+							all processing parameters may be overriden manually.</p>
+							<h4>Stepdown</h4>
+							<p>If the depth of cut is greater than 100 microns, endmill paths are machined in separate passes with each pass milling away 100 microns of material </p>
+							<h4>Optimization</h4>
+							<p>Join contiguous lines into polylines to reduce the number of stepdown operations and machining time</p>
+							<h4>Ramp Cut Operations</h4>
+							<p>Endmill operations are ramped into the work over the distance of the first line segment in the path</p>
+							<h4>Vertical alignment map adjustment (Z-Adjust)</h4>
+							<p>The software can adjust the depth of cut to compensate for small errors in the alignment between the spindle and the machining table.
+							A vertical alignment plane can be defined by inputing a text file with (a, b, c) where the correction term z = ax + by + c</p>
+							<h4>Disclaimer</h4>
+							<span>THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+							INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
+							IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+							WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+							OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE</span>
+						</div>
+					</div>
+				</div><!--/row-->
+      		</div><!--/container-->
+          </div><!--/intro-body-->
+	</header>
+	<!--/intro-->
+
+	<body role ="document">
+		<div class = "main-content" id="scroll-target">
+			<div class="container" role="main">
+				<div class="content-section" role="form">
+				
+					<!-- Section 1: File Input -->
+					<fieldset><legend>1. Input files</legend>
+						<div class="col-md-6" id="inputColumn1">
+							<div class="row">
+								<div id="file-input" class="form-group">
+									<label for="exampleInputFile" >a) Choose a DXF file</label>
+									<input type="file" accept=".dxf" id="dxfSelect" name="DXF File"></input>
+									<div class="progress progress-striped" style="width: 80%">
+										<div id="file-progress-bar" class="progress-bar progress-bar-success" role="progressbar" style="width: 0"></div>
+									</div>
+									<div id="fileDescription" class="help-block"></div>
+										<label for="exampleInputFile">b) Choose a vertical (Z) adjustment map (optional)</label>
+										<input type="file" accept=".dat" id="vMapSelect" name="Vertical Adjust Map"></input>
+									<div id="mapDescription" class="help-block"></div>
+								
+								</div><!--/file-input-->
+							</div>
+							<div class="row">
+								<div id="dxfTextPreviewContainer" class="collapse">
+									<div class="row">
+										<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseDxfTextPreview" style="width: 80%">View CAD file data</button>
+									</div>
+									<div class="row">
+										<div id="collapseDxfTextPreview" class="collapse scroll-area" style="width: 80%">
+											<pre id="dxfTextPreview" stlye="font-family: monospace;"></pre>
+										</div>
+									</div>
+								</div>
+							</div><!-- row -->
+						</div><!--/inputColumn1-->
+						<div class="col-md-6" id="inputColumn2">
+							<div class="row">
+								<label>CAD file preview</label>
+							</div>
+							<div class="row">
+								<div id="dxfView" class="drop-zone" title = "dxf File Preview: Right click and drag to pan. Mouse wheel to zoom in or out"></div>
+							</div>
+						</div><!--/inputColumn2-->
+					</fieldset>
+					<!--/Section 1-->
+					<br></br>
+					
+					<!-- Section 2: Parameters -->
+					<fieldset><legend>2. Set parameters</legend>
+						<div class = "form-group row">
+							<div class="col-md-2">
+								<form>
+									<label for="inputUnitSelect">Drawing Units:</label>
+									<select class="form-control" id = "inputUnitSelect">
+										<option value = "Millimeters">Millimeters</option>
+										<option value = "Inches">Inches</option>
+									</select>
+									<span class="help-block">Units of drawing</span>
+								</form>
+							</div><!-- col -->
+							<div class="col-md-2">
+								<form>
+									<label for="outputUnitSelect">Output Units:</label>
+									<select class="form-control" id = "outputUnitSelect">
+										<option value = "Millimeters">Millimeters</option>
+										<option value = "Inches">Inches</option>
+									</select>
+									<span class="help-block">Units to output G-code</span>
+								</form>
+							</div><!-- col -->
+							<div class="col-md-2">
+								<form>
+									<label for="substrateSelect">Substrate:</label>
+										<select class="form-control" id = "substrateSelect">
+												<!--<option value = "PMMA">PMMA</option>
+												<option value = "COC">COC</option>
+												<option value = "COP">COP</option>-->
+										</select>
+										<span class="help-block">Substrate material is used to select feeds and speeds</span>
+								</form>
+							</div>
+							<div class="col-md-2">
+								<label for="inputMovementFloor" class="col-form-label">Substrate thickness:</label>
+									<input type="number" class="form-control" name="substrateThickness" id="inputSubstrateThickness" value="1.5">
+									<span class="help-block">Substrate thickness is used to guess the depth of through holes</span>
+							</div>
+
+							<div class="col-md-2">
+								<label for="inputPeckRatio" class="col-form-label">Canned peck ratio:</label>
+									<input type="number" class="form-control" name="peckRatio" id="inputPeckRatio" value="0.125">
+									<span class="help-block">Sets Q for canned peck cycle</span>
+							</div>
+							<div class="col-md-2">
+								<div class="row">
+									<label for="inputWorkPlane" class="col-form-label">Work plane (G54-G58):</label>
+										<input type="number" class="form-control" name="workPlane" id="inputWorkPlane" value="55">
+										<span class="help-block">Set the work plane offsets</span>
+								</div><!-- row -->
+								<div class="row">
+									<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseFeedSpeedInfoTextPreview">Preview Feed/Speed</button>
+									    <div id="collapseFeedSpeedInfoTextPreview" class="collapse scroll-area">
+										<pre id="feedSpeedInfoTextPreview" stlye="font-family: monospace;"></pre>
+									</div>
+								</div><!-- row -->
+							</div><!-- col -->
+						</div><!--row-->
+						
+						<div class = "row">
+							<div class="table-responsive collapse" id="paramTable">
+  								<table class="table-striped table-hover">
+  									<thead>
+      									<tr>
+        									<th>Enable (#)</th>
+											<th>Layer Name</th>
+											<th>Items</th>
+											<th>Type</th>
+											<th>Color</th>
+											<th>Tool Type [units]</th>
+											<th>Tool Size [units]</th>
+											<th>Tool Num</th>
+											<th>Depth</th>
+											<th>Feed (x,y) [units/s]</th>
+											<th>Feed (z) [units/s]</th>
+											<th>Spindle RPM</th>
+											<th>Spindle Dir</th>
+											<th>Z - Adjust</th>
+											<th>Z - Floor</th>
+										</tr>
+									</thead>
+									<tbody id="paramTableBody"> </tbody>
+  								</table>	
+							  </div>
+						</div><!--row-->
+					</fieldset>
+					<!--/Section 2 -->
+					<br></br>
+					
+					<!-- Section 3: Job Info -->
+					<fieldset><legend>Job Information</legend>
+						<form>
+							<div class="form-group row">
+								<label for="inputOperationNumber" class="col-sm-2 col-form-label">Operation #:</label>
+								<div class="col-sm-10">
+									<input type="number" class="form-control" id="inputOperationNumber" onchange="setFiveDigit(this)" value="00021">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="inputName" class="col-sm-2 col-form-label">Name:</label>
+								<div class="col-sm-10">
+									<input type="text" class="form-control" id="inputName" value="Peter Anteater">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="inputPI" class="col-sm-2 col-form-label">PI:</label>
+								<div class="col-sm-10">
+									<input type="text" class="form-control" id="inputPI" value="Dan Aldrich">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="inputPartName" class="col-sm-2 col-form-label">Part Name:</label>
+								<div class="col-sm-10">
+									<input type="text" class="form-control" id="inputPartName" value="Mill Chip 1">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="inputEmail" class="col-sm-2 col-form-label">Contact email:</label>
+								<div class="col-sm-10">
+									<input type="email" class="form-control" id="inputEmail" value="panteater@uci.edu">
+								</div>
+							</div>
+							<div class="form-group row">
+								<label for="inputPhone" class="col-sm-2 col-form-label">Contact phone:</label>
+								<div class="col-sm-10">
+									<input type="telephone" class="form-control" id="inputPhone" value="555 555 5555">
+								</div>
+							</div>
+						</form>
+					</fieldset>
+					<!--/Section 3 -->
+					
+					<!--/Section 4: Generate and preview -->
+					<fieldset><legend>3. Generate G-Code</legend>
+						<button type="button" class="btn btn-primary btn-lg btn-block" onclick="generateGCode();">Generate G Code</button><br>
+						<div id = "results" class="collapse">
+							<div class="col-md-12">
+								<label>GCode preview</label>
+								<div id="gCodeView" title = "Tool Path Preview: Drag to orbit. Right click and drag to pan. Mouse wheel to zoom in or out"></div>
+							</div> <!--/row -2-->
+							<div class="col-md-12">
+								<div class="row">
+									<button type="button" class="btn btn-success btn-sm btn-block" id="downloadGCode" onclick="saveGcodeFile()">Download G Code File</button>
+									<!-- <a href="" id="a">Download file</a> -->
+									<!--<<button type="button" class="btn btn-success btn-lg" href="" id="a">Download file</button>-->
+								</div>
+								
+								<div class="row">
+									<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseGCodeTextPreview">View G Code File data</button>
+									<div id="collapseGCodeTextPreview" class="collapse scroll-area">
+										<pre id="gCodeTextPreview" stlye="font-family: monospace;"></pre>
+									</div>
+								</div>
+								<div class="row">
+									<button type="button" class="btn btn-success btn-sm btn-block" id="downloadJobInfo" onclick="saveJobInfoFile()">Download Job Info</button>
+								</div>
+								<div class="row">
+									<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseJobInfoTextPreview">View Job Info</button>
+									<div id="collapseJobInfoTextPreview" class="collapse scroll-area">
+										<pre id="jobInfoTextPreview" stlye="font-family: monospace;"></pre>
+									</div>
+								</div>
+							</div> <!--/row 2-->
+						</div> <!-- /results -->
+					</fieldset>
+					<!--/Section 4 -->
+					
+				</div><!--/content-section-->
+			</div><!--container-->
+		</div><!--/main-content-->
+	</body>
+	
+	<footer>
+		<div class = "col-md-3"></div>
+		<div class = "col-md-2">
+			<a href="http://www.uci.edu" class="btn-lg animated"><img src="img/uci_logo.png" width="100%"/> </a>
+		</div>
+		<div class = "col-md-2">
+			<a href="http://www.inrf.uci.edu/cadmim" class="btn-lg animated"><img src="img/cadmim_logo_black.png" width="100%"/> </a>
+		</div>
+		<div class = "col-md-2">
+			<a href="http://www.hui.bme.uci.edu" class="btn-lg animated"><img src="img/huilab_logo.png" width="100%"/> </a>
+		</div>
+		<div class = "col-md-3"></div>
+		<div class = "row"></div>
+		<div class = "text-center">Copyright 2018</div>
+		
+	</footer>
+	
+	<!--<script language="javascript" type="text/javascript" src="js/modernizr.custom.93389.js"></script>
+    <script language="javascript" type="text/javascript" src="js/sugar-1.2.4.min.js"></script>-->
+	<script language="javascript" type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/bootstrap.min.js"></script>
+  	<script language="javascript" type="text/javascript" src="js/three.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/OrbitControls.js"></script>
+	<script language="javascript" type="text/javascript" src="js/TrackballControls.js"></script>
+	<script language="javascript" type="text/javascript" src="js/dxf-parser.js"></script>
+	<script language="javascript" type="text/javascript" src="js/three-dxf.js"></script>
+	
+	<script language="javascript" type="text/javascript" src="js/gcode-model.js"></script>
+	<script language="javascript" type="text/javascript" src="js/gcode-parser.js"></script>
+	<script language="javascript" type="text/javascript" src="js/gcode-writer.js"></script>
+    <script language="javascript" type="text/javascript" src="js/gcode-renderer.js"></script>
+    
+	<script language="javascript" type="text/javascript" src="index.js"></script>
+</html>
