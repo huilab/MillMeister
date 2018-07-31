@@ -3,6 +3,7 @@
  */
 // This is the main js file for MillMeister.io. It handles ui i/o.
 // Copyright 2017, 2018 Erik Werner, UC Irvine
+// Based on convertumill2gcode by Phil Duncan
 
 const VERSION_NAME = "MillMeister.io Version 1.0";
 
@@ -10,6 +11,7 @@ var progress = document.getElementById('file-progress-bar');
 var $progress = $('.progress');
 
 $(document).ready(function(){ 
+	document.getElementById('versionString').innerHTML = VERSION_NAME;
 	console.log(VERSION_NAME);
 	if (localStorage) {
 		loadUserInfo();
@@ -18,7 +20,6 @@ $(document).ready(function(){
 	}
 	
 }) 
-
 
 var gCodeBlob = null;
 var gCodeFileName = null;
@@ -72,7 +73,7 @@ function fillSubstrates(speeds) {
 			if(selectedSubstrate ==null) {selectedSubstrate = key};
 		}
 	);
-	return output.join('');													
+	return output.join('');
 }
 
 function fillFeedsSpeeds(speeds) {
@@ -110,71 +111,69 @@ document.getElementById('vMapSelect').addEventListener('change', onMapFileSelect
 
 function onDragOver(evt) {
 	console.log("drag over");
-    evt.stopPropagation();
-    evt.preventDefault();
-    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+	evt.stopPropagation();
+	evt.preventDefault();
+	evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
 }
 
 function onDrop(evt) {
   console.log('File(s) dropped');
   // Prevent default behavior (Prevent file from being opened)
   evt.preventDefault();
-    for (var i = 0; i < evt.dataTransfer.files.length; i++) {
-      loadDxfFile(evt.dataTransfer.files[i]);//.name?
-    }
+	for (var i = 0; i < evt.dataTransfer.files.length; i++) {
+	  loadDxfFile(evt.dataTransfer.files[i]);//.name?
+	}
   // Pass event to removeDragData for cleanup
   removeDragData(evt);
 }
 
 function removeDragData(evt) {
   if (evt.dataTransfer.items) {
-    // Use DataTransferItemList interface to remove the drag data
-    evt.dataTransfer.items.clear();
+	// Use DataTransferItemList interface to remove the drag data
+	evt.dataTransfer.items.clear();
   } else {
-    // Use DataTransfer interface to remove the drag data
-    evt.dataTransfer.clearData();
+	// Use DataTransfer interface to remove the drag data
+	evt.dataTransfer.clearData();
   }
 }
 
 function onDxfFileSelected(evt) {
 	console.log("dxf selected");
 
-    var file = evt.target.files[0];
-    loadDxfFile(file);
+	var file = evt.target.files[0];
+	loadDxfFile(file);
 }
 
 
 function loadDxfFile(file) {
 	console.log("loading file: " + file.name);
 	progress.style.width = '0%';
-    progress.textContent = '0%';
-    //display file info
-    var output = [];
-    output.push('<li><strong>', encodeURI(file.name), '</strong> (', file.type || 'n/a', ') <br> ',
-        file.size, ' bytes, last modified: ',
-        file.lastModifiedDate ? file.lastModifiedDate.toLocaleDateString() : 'n/a',
-        '</li>');
-    document.getElementById('fileDescription').innerHTML = '<ul>' + output.join('') + '</ul>';
+	progress.textContent = '0%';
+	//display file info
+	var output = [];
+	output.push('<li><strong>', encodeURI(file.name), '</strong> (', file.type || 'n/a', ') <br> ',
+		file.size, ' bytes, last modified: ',
+		file.lastModifiedDate ? file.lastModifiedDate.toLocaleDateString() : 'n/a',
+		'</li>');
+	document.getElementById('fileDescription').innerHTML = '<ul>' + output.join('') + '</ul>';
 
-    $progress.addClass('loading');
+	$progress.addClass('loading');
 
-    var reader = new FileReader();
-    reader.onprogress = updateProgress;
-    reader.onloadend = onDxfReadSuccess;
-    reader.onabort = abortUpload;
-    reader.onerror = errorHandler;
-    reader.readAsText(file);
+	var reader = new FileReader();
+	reader.onprogress = updateProgress;
+	reader.onloadend = onDxfReadSuccess;
+	reader.onabort = abortUpload;
+	reader.onerror = errorHandler;
+	reader.readAsText(file);
 }
 
 function onMapFileSelected(evt) {
 	var file = evt.target.files[0];
 	if(file) {
-		
+		var reader = new FileReader();
+		reader.onloadend = onMapReadSuccess;
+		reader.readAsText(file);
 	}
-	var reader = new FileReader();
-	reader.onloadend = onMapReadSuccess;
-	reader.readAsText(file);
-	
 }
 
 function onMapReadSuccess(evt) {
@@ -209,69 +208,69 @@ function onMapReadSuccess(evt) {
 }
 
 function abortUpload() {
-    console.log('File read aborted');
+	console.log('File read aborted');
 }
 
 function errorHandler(evt) {
-    switch(evt.target.error.code) {
-    case evt.target.error.NOT_FOUND_ERR:
-        alert('File Not Found!');
-        break;
-    case evt.target.error.NOT_READABLE_ERR:
-        alert('File is not readable');
-        break;
-    case evt.target.error.ABORT_ERR:
-        break; // noop
-    default:
-        alert('An error occurred reading this file');
-    }
+	switch(evt.target.error.code) {
+	case evt.target.error.NOT_FOUND_ERR:
+		alert('File Not Found!');
+		break;
+	case evt.target.error.NOT_READABLE_ERR:
+		alert('File is not readable');
+		break;
+	case evt.target.error.ABORT_ERR:
+		break; // noop
+	default:
+		alert('An error occurred reading this file');
+	}
 }
 
 function updateProgress(evt) {
-    console.log(Math.round((evt.loaded /evt.total) * 100));
-    if(evt.lengthComputable) {
-        var percentLoaded = Math.round((evt.loaded /evt.total) * 100);
-        if (percentLoaded < 100) {
-            progress.style.width = percentLoaded + '%';
-            progress.textContent = percentLoaded + '%';
-        }
-    }
+	console.log(Math.round((evt.loaded /evt.total) * 100));
+	if(evt.lengthComputable) {
+		var percentLoaded = Math.round((evt.loaded /evt.total) * 100);
+		if (percentLoaded < 100) {
+			progress.style.width = percentLoaded + '%';
+			progress.textContent = percentLoaded + '%';
+		}
+	}
 }
 
 function onDxfReadSuccess(evt){
 	// load in DXF file
-    var fileReader = evt.target;
-    if(fileReader.error) return console.log("error on load end");
-    progress.style.width = '100%';
-    progress.textContent = '100%';
-    setTimeout(function() { $progress.removeClass('loading'); }, 2000);
-    var parser = new window.DxfParser();
-    var dxf = parser.parseSync(fileReader.result);
-    
-    // generate text preview
-    var textPreview = document.getElementById('dxfTextPreview');
-    textPreview.innerHTML = JSON.stringify(dxf, null, 4);
-    
-    var dxfPreviewDiv = $('#dxfTextPreviewContainer');
-    if (!dxfPreviewDiv.is(':visible')) {
-    	dxfPreviewDiv.collapse('toggle');
-    }
+	var fileReader = evt.target;
+	if(fileReader.error) return console.log("error on load end");
+	progress.style.width = '100%';
+	progress.textContent = '100%';
+	setTimeout(function() { $progress.removeClass('loading'); }, 2000);
+	var parser = new window.DxfParser();
+	var dxf = parser.parseSync(fileReader.result);
+	
+	// generate text preview
+	var textPreview = document.getElementById('dxfTextPreview');
+	textPreview.innerHTML = JSON.stringify(dxf, null, 4);
+	
+	var dxfPreviewDiv = $('#dxfTextPreviewContainer');
+	if (!dxfPreviewDiv.is(':visible')) {
+		dxfPreviewDiv.collapse('toggle');
+	}
 
-    // grab geometry for 3D preview
-    dxfGeo = getGeo(dxf);
-    
-    // generate 3D preview
-    var dxfDiv = document.getElementById('dxfView');
+	// grab geometry for 3D preview
+	dxfGeo = getGeo(dxf);
+	
+	// generate 3D preview
+	var dxfDiv = document.getElementById('dxfView');
 	while(dxfDiv.firstChild){
 		dxfDiv.removeChild(dxfDiv.firstChild);
 	}
-    // Note: Three.js changed the way fonts are loaded, and now we need to use FontLoader to load a font
-    // and enable TextGeometry. See this example http://threejs.org/examples/?q=text#webgl_geometry_text
-    // and this discussion https://github.com/mrdoob/three.js/issues/7398
-    var loader = new THREE.FontLoader();
-    var font = loader.load(
-    	'fonts/helvetiker_regular.typeface.json',
-    	function ( font ) {
+	// Note: Three.js changed the way fonts are loaded, and now we need to use FontLoader to load a font
+	// and enable TextGeometry. See this example http://threejs.org/examples/?q=text#webgl_geometry_text
+	// and this discussion https://github.com/mrdoob/three.js/issues/7398
+	var loader = new THREE.FontLoader();
+	var font = loader.load(
+		'fonts/helvetiker_regular.typeface.json',
+		function ( font ) {
 			// load scene without the font
 			var dxfScene = new ThreeDxf.Viewer(dxf, dxfDiv, 500, 500, font);
 		},
@@ -288,23 +287,23 @@ function onDxfReadSuccess(evt){
 		}
 	);
 	
-    // populate a table from DXF layer data
-    var tableDiv = $('#paramTable');
-    if (!tableDiv.is(':visible')) {
-    	tableDiv.collapse('toggle');
-    }
- 	document.getElementById('paramTableBody').innerHTML = buildTable(dxfGeo);
+	// populate a table from DXF layer data
+	var tableDiv = $('#paramTable');
+	if (!tableDiv.is(':visible')) {
+		tableDiv.collapse('toggle');
+	}
+	document.getElementById('paramTableBody').innerHTML = buildTable(dxfGeo);
 }
 
 // 
 function setFiveDigit(elm) {
-    var newValue = elm.value.toString();
-    var digits = newValue.length;
-    while(digits < 5){
-        newValue = "0" + newValue;
-        digits = newValue.length;
-    }
-    elm.value = newValue;
+	var newValue = elm.value.toString();
+	var digits = newValue.length;
+	while(digits < 5){
+		newValue = "0" + newValue;
+		digits = newValue.length;
+	}
+	elm.value = newValue;
 }
 
 // prepares the main tool parameter table
@@ -314,7 +313,7 @@ function buildTable(dxfGeo){
 	var tableText = "";
 	var stepCount = 0;
 	
-    for (var i=0; i<dxfGeo.layers.length; ++i) {
+	for (var i=0; i<dxfGeo.layers.length; ++i) {
 		var layerName = dxfGeo.layers[i].name;
 		var tool = guessToolType(dxfGeo.layers[i].name);
 		var toolDiameter = guessToolDiameter(dxfGeo.layers[i].name);
@@ -335,8 +334,8 @@ function buildTable(dxfGeo){
 		opOrder, dxfGeo.layers[i].contents.length, 
 		dxfGeo.layers[i].type, dxfGeo.layers[i].color, 
 		layerName, tool, toolDiameter, depth, feed, plunge);
-		tableText +="</tr>";    
-    }
+		tableText +="</tr>";	
+	}
 	return tableText;
 };
 
@@ -345,7 +344,7 @@ function generateTableRow(opOrder, count, type, color, layerName, tool, toolDiam
 	var text="<td><input type=\"checkbox\" name=\""+ layerName + 
 	"\" id=\""+layerName +"\" " + isDefaultEnabled(tool)+">"+ 
 	"<input type=\"number\" name=\""+ layerName.concat("processOrder") +
-	"\" id=\""+layerName.concat("processOrder") + "\" value=" + opOrder  + "></td>";
+	"\" id=\""+layerName.concat("processOrder") + "\" value=" + opOrder	 + "></td>";
 	//tableText+="<tr><td><input type=\"checkbox\" name=\"name\"></td>";
 
 	//col 1 name
@@ -511,10 +510,10 @@ function guessFeedSpeed(toolDiameter, index, defaultValue) {
 function generateGCode() {
 	saveUserInfo();
 	var resultsDiv = $('#results');
-    if (!resultsDiv.is(':visible')) {
-    	resultsDiv.collapse('toggle');
-    }
-    
+	if (!resultsDiv.is(':visible')) {
+		resultsDiv.collapse('toggle');
+	}
+	
 	var data = convertDxfToGCode(dxfGeo);
 	gCodeFileName = data[0];
 	gCodeContents = data[1];
@@ -547,27 +546,27 @@ function loadUserInfo() {
 	console.log("loading settings from local storage");
 	// Retrieve saved data from last use
 	var opNum = localStorage.getItem('opNum');
-	if (opNum != "undefined" || opNum != "null") {
+	if (opNum != "undefined" && opNum != "null") {
 		document.getElementById('inputOperationNumber').value = opNum;
 	}
 	var name = localStorage.getItem('name');
-	if (name != "undefined" || name != "null") {
+	if (name != "undefined" && name != "null") {
 		document.getElementById('inputName').value = name;
 	}
 	var pi = localStorage.getItem('pi');
-	if (pi != "undefined" || pi != "null") {
+	if (pi != "undefined" && pi != "null") {
 		document.getElementById('inputPI').value = pi;
 	}
 	var partName = localStorage.getItem('partName');
-	if (partName != "undefined" || partName != "null") {
+	if (partName != "undefined" && partName != "null") {
 		document.getElementById('inputPartName').value = partName;
 	}
 	var email = localStorage.getItem('email');
-	if (email != "undefined" || email != "null") {
+	if (email != "undefined" && email != "null") {
 		document.getElementById('inputEmail').value = email;
 	}
 	var phone = localStorage.getItem('phone');
-	if (phone != "undefined" || phone != "null") {
+	if (phone != "undefined" && phone != "null") {
 		document.getElementById('inputPhone').value = phone;
 	}
 }
@@ -584,7 +583,7 @@ function openGCodeFromText(gcode) {
 	
 	var textPreview = document.getElementById('gCodeTextPreview');
 	textPreview.innerHTML = gcode;//JSON.stringify(gcode, null, 4);
-    
+	
   //localStorage.setItem('last-imported', gcode);
   //localStorage.removeItem('last-loaded');
 }
@@ -616,16 +615,16 @@ function saveJobInfoFile() {
 }
 
 var saveBlob = (function () {
-    var a = document.createElement("a");
-    document.body.appendChild(a);
-    a.style = "display: none";
-    return function (blob, fileName) {
-        var url = window.URL.createObjectURL(blob);
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(url);
-    };
+	var a = document.createElement("a");
+	document.body.appendChild(a);
+	a.style = "display: none";
+	return function (blob, fileName) {
+		var url = window.URL.createObjectURL(blob);
+		a.href = url;
+		a.download = fileName;
+		a.click();
+		window.URL.revokeObjectURL(url);
+	};
 }
 
 ());
