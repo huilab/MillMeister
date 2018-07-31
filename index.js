@@ -1,5 +1,5 @@
 /**
- * @author Erik Werner / https://github.com/
+ * @author Erik Werner / https://github.com/erikmwerner
  */
 // This is the main js file for MillMeister.io. It handles ui i/o.
 // Copyright 2017, 2018 Erik Werner, UC Irvine
@@ -10,8 +10,13 @@ var progress = document.getElementById('file-progress-bar');
 var $progress = $('.progress');
 
 $(document).ready(function(){ 
-console.log("setting version");
-	document.getElementById('versionString').innerHTML = VERSION_NAME;
+	console.log(VERSION_NAME);
+	if (localStorage) {
+		loadUserInfo();
+	} else {
+		console.log("no local storage support");
+	}
+	
 }) 
 
 
@@ -72,7 +77,7 @@ function fillSubstrates(speeds) {
 
 function fillFeedsSpeeds(speeds) {
 	var output = ["<table>"];
-	output.push("<th>Tool Dia. [mm]</th><th>Feed [mm/s]</th><th>Speed [mm/s]</th>");
+	output.push("<th>Tool Dia. [mm]</th><th>Feed [mm/min]</th><th>Speed [mm/min]</th>");
 	Object.entries(speeds).forEach(
 		([key, value]) => {
 			if(key == selectedSubstrate) {
@@ -504,7 +509,7 @@ function guessFeedSpeed(toolDiameter, index, defaultValue) {
 }
 
 function generateGCode() {
-
+	saveUserInfo();
 	var resultsDiv = $('#results');
     if (!resultsDiv.is(':visible')) {
     	resultsDiv.collapse('toggle');
@@ -520,6 +525,51 @@ function generateGCode() {
 	jobInfoBlob = new Blob([jobInfoContents], {endings: "transparent"});
 	openGCodeFromText(data[1]);
 	openJobInfoFromText(data[3]);
+}
+
+function saveUserInfo() {
+	var opNum = document.getElementById('inputOperationNumber').value;
+	localStorage.setItem('opNum', opNum);
+	var name = document.getElementById('inputName').value;
+	localStorage.setItem('name', name);
+	var pi = document.getElementById('inputPI').value;
+	localStorage.setItem('pi', pi);
+	var partName = document.getElementById('inputPartName').value;
+	localStorage.setItem('partName', partName);
+	var email = document.getElementById('inputEmail').value;
+	localStorage.setItem('email', email);
+	var phone = document.getElementById('inputPhone').value;
+	localStorage.setItem('phone', phone);
+	console.log("saved settings to local storage");
+}
+
+function loadUserInfo() {
+	console.log("loading settings from local storage");
+	// Retrieve saved data from last use
+	var opNum = localStorage.getItem('opNum');
+	if (opNum != "undefined" || opNum != "null") {
+		document.getElementById('inputOperationNumber').value = opNum;
+	}
+	var name = localStorage.getItem('name');
+	if (name != "undefined" || name != "null") {
+		document.getElementById('inputName').value = name;
+	}
+	var pi = localStorage.getItem('pi');
+	if (pi != "undefined" || pi != "null") {
+		document.getElementById('inputPI').value = pi;
+	}
+	var partName = localStorage.getItem('partName');
+	if (partName != "undefined" || partName != "null") {
+		document.getElementById('inputPartName').value = partName;
+	}
+	var email = localStorage.getItem('email');
+	if (email != "undefined" || email != "null") {
+		document.getElementById('inputEmail').value = email;
+	}
+	var phone = localStorage.getItem('phone');
+	if (phone != "undefined" || phone != "null") {
+		document.getElementById('inputPhone').value = phone;
+	}
 }
 
 function openGCodeFromText(gcode) {
