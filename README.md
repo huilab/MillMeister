@@ -14,8 +14,8 @@ The gcode is parsed and rendered as a 3D model using three.js.
 Visit https://huilab.github.io/millmeister/
 
 #### To Run Locally
-Clone the repo
-Uncomment and check the path to your preferred browser in startserver.py
+* Clone the repo
+* In the file startserver.py, uncomment and check the path to your preferred browser
 ```
 > cd millmeister
 > python startserver.py
