@@ -201,7 +201,7 @@ function processCircles(layer, depth, floor, increment, plunge) {
 	//var dwell = 1.000;
 	
 	var object_count = 0;
-
+	
 	text += "G90" + e;//switch to absolute coordinates
 	for(var i=0; i< layer.contents.length; ++i){
 		var circle = layer.contents[i];
@@ -322,6 +322,10 @@ function convertDxfToGCode(dxfGeo) {
 		
 		//check that feed and plunge have decimal points
 		//note: HAAS by default wants decimals after integers
+		if(depth.indexOf('.') < 0)
+		{
+			depth = depth + ".";
+		}
 		if(feed.indexOf('.') < 0)
 		{
 			feed = feed + ".";
