@@ -5,7 +5,7 @@
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 // Based on convertumill2gcode by Phil Duncan
 
-const VERSION_NAME = "MillMeister.io Version 1.0";
+const VERSION_NAME = "MillMeister.io Version 1.0.1";
 
 var progress = document.getElementById('file-progress-bar');
 var $progress = $('.progress');
