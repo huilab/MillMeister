@@ -385,7 +385,7 @@ function generateTableRow(opOrder, count, type, color, layerName, tool, toolDiam
 
 	//col 7 tool number. requires manual editing
 	text+="<td><input type=\"number\" name=\""+ layerName.concat("toolNumber") +
-	"\" id=\""+layerName.concat("toolNumber") + "\" value=" + 1 + "></td>";
+	"\" id=\""+layerName.concat("toolNumber") + "\" value=" + 0 + "></td>";
 
 	//col 8 guess the depth from the name
 	text+="<td><input type=\"number\" name=\""+ layerName.concat("depth") +
@@ -412,7 +412,7 @@ function generateTableRow(opOrder, count, type, color, layerName, tool, toolDiam
 
 	// col 14 movement floor
 	text+="<td><input type=\"number\" name=\""+ layerName.concat("movementFloor") +
-	"\" id=\""+layerName.concat("movementFloor") + "\" value=" + 2 + "></td>";
+	"\" id=\""+layerName.concat("movementFloor") + "\" value=" + 1.0 + "></td>";
 	
 	return text;
 }
@@ -508,7 +508,6 @@ function guessFeedSpeed(toolDiameter, index, defaultValue) {
 }
 
 function generateGCode() {
-	saveUserInfo();
 	var resultsDiv = $('#results');
 	if (!resultsDiv.is(':visible')) {
 		resultsDiv.collapse('toggle');
@@ -524,6 +523,8 @@ function generateGCode() {
 	jobInfoBlob = new Blob([jobInfoContents], {endings: "transparent"});
 	openGCodeFromText(data[1]);
 	openJobInfoFromText(data[3]);
+	
+	saveUserInfo();
 }
 
 function saveUserInfo() {

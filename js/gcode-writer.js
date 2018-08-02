@@ -318,7 +318,7 @@ function convertDxfToGCode(dxfGeo) {
 		var feed = document.getElementById(layerName.concat("feed")).value;
 		var plunge = document.getElementById(layerName.concat("plunge")).value;
 		var floor = document.getElementById(layerName.concat("movementFloor")).value;
-		var stepDown = 0.5 * toolDiameter;
+		var stepDown = 0.25 * toolDiameter;
 		
 		//check that feed and plunge have decimal points
 		//note: HAAS by default wants decimals after integers
@@ -356,14 +356,14 @@ function convertDxfToGCode(dxfGeo) {
 		fileText += "(Depth: "+ depth + " " + unitsShort + ")" +e;
 		fileText += "(----------------------------)" + e;
 		
-		fileText += "(Optional Program Stop)" + e;
-		fileText += "M01" + e + e;
-		
 		logText += "Tool number " + toolNumber + ": " + toolDiameter + " " + toolType + " to depth: " + depth + " " + unitsShort + e;
 		
 		//change tool and offset
 		fileText += "T" + toolNumber + " M06" + e + 
 		"G43 H" + toolNumber + e;
+		
+		fileText += "(Optional Program Stop)" + e;
+		fileText += "M01" + e + e;
 		
 		// TK TODO add support for CCW tools
 		var dir = "CW";
