@@ -53,7 +53,6 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 	
 	var logText = "";
 	var text = "G90" + e;//switch to absolute coordinates
-	text += "G00 Z" + floor + e;//move above work to movement floor
 	
 	logText += "Line Layer...Name: " + layer.name + "..." + e;
 	logText += "Stepdown: " + stepDown + " " + " floor: " + floor + e;
@@ -67,6 +66,7 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 	for(var i = 0; i<n_objects; ++i) {
 		var line = layer.contents[i];
 		
+		// check what kind of object it is
 		if(line.type == "LINE") {
 			line_count++;
 		}
@@ -89,13 +89,14 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 			break;
 		}
 		
+		// find the first two points
 		var x1 = line.vertices[0].x.toFixed(3);
 		var y1 = line.vertices[0].y.toFixed(3);
 		var x2 = line.vertices[1].x.toFixed(3);
 		var y2 = line.vertices[1].y.toFixed(3);
 		
 		//rapid to start point
-		text += "G00 X"+ x1 + " Y"+ y1 + e;
+		text += "G00 X"+ x1 + " Y"+ y1 + " Z" + floor + e;
 		//lower tool to surface
 		text += "G01 Z0." + " F" + plunge + e;
 		
@@ -114,6 +115,9 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 			//ramp to this depth using the first line segment
 			//ramp goes to p2 and back to p1
 			text += rampAdjust(x1, y1, x2, y2, currentDepth, feed, plunge);
+			
+			//Ensure G01 and F(feed) are set
+			
 			pass_count++;
 			//now process all line segments of polyline at this depth
 			//starting at p2
@@ -123,13 +127,13 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 				var p2x = line.vertices[j+1].x.toFixed(3);
 				var p2y = line.vertices[j+1].y.toFixed(3);
 				
-				text += "G01 X" + p2x + " Y" + p2y + " F" + feed + e;
+				text += "X" + p2x + " Y" + p2y + e;
 				
 			}
 			
 			//if polyline is closed, go back to the start
 			if(layer.contents[i].shape == true) {
-				text += "G01 X" + x1 + " Y" + y1 + " F" + feed + e;
+				text += "X" + x1 + " Y" + y1 + e;
 			}
 			
 			//raise the tool
@@ -137,11 +141,15 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 			
 			if(currentDepth < depth) {
 				//go to the next depth
+				var lastDepth = currentDepth;
 				currentDepth = findNextCutDepth(currentDepth, stepDown, depth);
 				//return to start point for next pass
 				text += "G00 X"+ x1 + " Y"+ y1 + e;
+				
 				//lower tool to surface
-				text += "G01 Z0." + " F" + plunge + e;
+				//text += "G01 Z0." + " F" + plunge + e;
+				//lower tool to the last cut depth
+				text += "G01 Z-" + lastDepth + " F" + plunge + e;
 			}
 			else {
 				//the current depth equals the target
@@ -235,7 +243,7 @@ function convertDxfToGCode(dxfGeo) {
 	var increment = document.getElementById("inputPeckRatio").value;
 	var date = new Date();
 	date = date.toString();
-	date = date.replace(/[()]/g, '');
+	date = date.replace(/[()]/g, "");
 	
 	var bossman = document.getElementById("inputPI").value;
 	var email= document.getElementById("inputEmail").value;
@@ -243,6 +251,17 @@ function convertDxfToGCode(dxfGeo) {
 	var substrateName = document.getElementById("substrateSelect").value;
 	var substrateThickness = document.getElementById("inputSubstrateThickness").value;
 	
+	//var addOptionStop = true;
+	//var stepDownRatio = 0.5;
+	var addOptionStop =document.getElementById("inputIncludeM01").checked;
+	var addBlockNumbers =document.getElementById("inputBlockNumbers").checked;
+	var stepDownRatio = document.getElementById("inputStepdown").value;
+	var zRef = document.getElementById("inputZRef").value;
+	
+	if(zRef.indexOf(".") < 0)
+	{
+		zRef = zRef + ".";
+	}
    
 	
 	//start the gcode file
@@ -318,23 +337,24 @@ function convertDxfToGCode(dxfGeo) {
 		var feed = document.getElementById(layerName.concat("feed")).value;
 		var plunge = document.getElementById(layerName.concat("plunge")).value;
 		var floor = document.getElementById(layerName.concat("movementFloor")).value;
-		var stepDown = 0.25 * toolDiameter;
+		var stepDown = stepDownRatio * toolDiameter;
+		
 		
 		//check that feed and plunge have decimal points
 		//note: HAAS by default wants decimals after integers
-		if(depth.indexOf('.') < 0)
+		if(depth.indexOf(".") < 0)
 		{
 			depth = depth + ".";
 		}
-		if(feed.indexOf('.') < 0)
+		if(feed.indexOf(".") < 0)
 		{
 			feed = feed + ".";
 		}
-		if(plunge.indexOf('.') < 0)
+		if(plunge.indexOf(".") < 0)
 		{
 			plunge = plunge + ".";
 		}
-		if(floor.indexOf('.') < 0)
+		if(floor.indexOf(".") < 0)
 		{
 			floor = floor + ".";
 		}
@@ -349,8 +369,10 @@ function convertDxfToGCode(dxfGeo) {
 		
 		//write layer description
 		fileText += e; // leave a blank line before the comment block
+		fileText += "N" + step + e; // add block numbers
 		fileText += "(----------------------------)" + e; 
-		fileText += "(Starting layer "+ layerName + ")" + e;
+		fileText += "(--Step " + step + " of " + process_order.length + "--)" + e;
+		fileText += "(Layer name: "+ layerName + " )" + e;
 		fileText += "(Tool # " + toolNumber + ")" + e;
 		fileText += "(Tool Type: " + toolType + ")" + e;
 		fileText += "(Depth: "+ depth + " " + unitsShort + ")" +e;
@@ -362,15 +384,19 @@ function convertDxfToGCode(dxfGeo) {
 		fileText += "T" + toolNumber + " M06" + e + 
 		"G43 H" + toolNumber + e;
 		
-		fileText += "(Optional Program Stop)" + e;
-		fileText += "M01" + e + e;
+		if(addOptionStop) {
+			fileText += "M01 (Option Stop)" + e + e;
+		}
 		
 		// TK TODO add support for CCW tools
 		var dir = "CW";
 		fileText += (dir == "CW") ? "M03" : "M04";
 		
 		var rpm = document.getElementById(layerName.concat("rpm")).value;
-		fileText += " S" + rpm + e + e;
+		fileText += " S" + rpm + e;
+		
+		//dwell for 2s before moving to allow spindle to spin up
+		fileText += "G04 P2.0" + e + e;
 		
 		switch(dxfGeo.layers[process_order[layer].index].type) {
 		case "LINE":
@@ -403,6 +429,13 @@ function convertDxfToGCode(dxfGeo) {
 			break;
 		}	  
 	}
+	
+	
+	if(zRef == null) {
+		zRef = 75.0; //75mm
+	}
+	fileText += "(RETURN TO REFERENCE)" + e;
+	fileText += "G91 G28 X0 Y0 Z" + zRef + e;
 	
 	//finish the gcode with an M30
 	fileText += "(------END PROGRAM------)" + e + "M30" + e + "%" + e;

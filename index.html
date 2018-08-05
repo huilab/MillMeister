@@ -5,32 +5,29 @@
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-		<meta name="description" content="">
-		<meta name="author" content="">
-		<link rel="icon" href="../../favicon.ico">
-
-		<title>MillMeister.io</title>
-	
+		<meta name="description" content="dxf to gcode converter for microfluidics">
+		<meta name="author" content="Erik Werner">
+		<link rel="icon" href="img/favicon.ico">
+		<title>MillMeister</title>
 		<link rel="stylesheet" href="css/bootstrap.min.css">
 		<link rel="stylesheet" href="css/styles.css">
-		
 	</head>
 	<!-- Intro Header -->
-  	<header class="intro">
-		  <div class="intro-body">
-			  <div class="container">
-              	<div class="row">
-				  	<video poster="img/haas.png" id="bgvid" playsinline autoplay muted loop>
+	<header class="intro">
+		<div class="intro-body">
+			<div class="container">
+				<div class="row">
+					<video poster="img/haas.png" id="bgvid" playsinline autoplay muted loop>
 						<source src="img/haas3g.m4v" type="video/mp4">
 					</video>
-                  	<div class="col-md-8 col-md-offset-2 fadein">
-						  <h1 class="brand-heading stroke">MillMeister.io</h1>
-							<h3> g-code generator for fabricating microfluidic circuits</h3>  
-							<h6 id="versionString"> Version: </h6>
+					<div class="col-md-8 col-md-offset-2 fadein">
+						<h1 class="brand-heading stroke">MillMeister</h1>
+						<h3> g-code generator for fabricating microfluidic circuits</h3>  
+						<h6 id="versionString"> Version: </h6>
 					</div>
-			  </div><!--/row-->
-			  <div class="row">
-				  <div class="col-md-6 fadein">
+				</div><!--/row-->
+				<div class="row">
+					<div class="col-md-6 fadein">
 						<a href="#get-started" type="button" class="btn btn-primary btn-lg" id="get-started">Get Started</a>
 					</div>
 					<div class="col-md-6 fadein">
@@ -39,14 +36,14 @@
 				</div><!--/row-->
 				<div class="row">
 					<div id="collapse1" class="panel-collapse collapse">
-        				<div class="panel-body stroke"><h2>MillMeister.io Instructions</h2></div>
+						<div class="panel-body stroke"><h2>MillMeister Instructions</h2></div>
 						<div class="panel-footer">
-							<p>MillMeister.io converts dxf files to tool paths for surface milling. Special features 
+							<p>MillMeister converts dxf files to tool paths for surface milling. Special features 
 							are included to improve milling of microfluidic chips or other high-precision parts. 
 							The Z-adjust feature is based on the AutoLisp script described in 
 							<a href = "https://doi.org/10.1039/C4LC01048E"> Scaling of pneumatic digital logic circuits</a>
 							</p>
-							
+						
 							<h4>How to use: </h4>
 							<p><ol>
 							<li> upload a dxf file</li>
@@ -54,7 +51,7 @@
 							<li> download the gcode</li>
 							<li> <strong>WARNING:</strong> Always check gcode for errors and simulate jobs before machining! </li>
 							</ol></p>
-							
+						
 							<h4>DXF Format Guidelines: </h4>
 							<p> Currently supported drawing elements are:
 							<ul>
@@ -62,15 +59,15 @@
 							<li>Polylines</li>
 							<li>Circles</li>
 							</ul></p>
-							
-							<p>MillMeister.io processes the dxf file layer by layer and assigns each layer an operation number, tool number, depth (z) and feed rates (x,y,z).
+						
+							<p>MillMeister processes the dxf file layer by layer and assigns each layer an operation number, tool number, depth (z) and feed rates (x,y,z).
 							For every layer in the drawing, it will produce gcode for that tool, cutting all the features in that layer to the specified depth (z) 
 							at the specified feed rates (x,y,z).
 							<ul>
 							<li>Lines and polylines are milled</li>
 							<li>Circles are drilled</li>
 							</ul></p>
-							
+						
 							<p>Cutting parameters, including tool type and depth of cut, 
 							can be automatically populated by naming drawing layers with the format:</p>
 							<p> &lt Ignored &gt &lt Tool Diameter &gt &lt Tool Type &gt  ... &lt "Z" &gt &lt Depth of Cut &gt </p>
@@ -96,11 +93,11 @@
 						</div>
 					</div>
 				</div><!--/row-->
-      		</div><!--/container-->
-          </div><!--/intro-body-->
+			</div><!--/container-->
+		</div><!--/intro-body-->
 	</header>
 	<!--/intro-->
-
+	<!--/document body-->
 	<body role ="document">
 		<div class = "main-content" id="scroll-target">
 			<div class="container" role="main">
@@ -156,7 +153,7 @@
 									<label for="inputUnitSelect">Drawing Units:</label>
 									<select class="form-control" id = "inputUnitSelect">
 										<option value = "Millimeters">Millimeters</option>
-										<option value = "Inches">Inches</option>
+										<!-- <option value = "Inches">Inches</option> -->
 									</select>
 									<span class="help-block">Units of drawing</span>
 								</form>
@@ -166,7 +163,7 @@
 									<label for="outputUnitSelect">Output Units:</label>
 									<select class="form-control" id = "outputUnitSelect">
 										<option value = "Millimeters">Millimeters</option>
-										<option value = "Inches">Inches</option>
+										<!-- <option value = "Inches">Inches</option> -->
 									</select>
 									<span class="help-block">Units to output G-code</span>
 								</form>
@@ -183,7 +180,7 @@
 								</form>
 							</div>
 							<div class="col-md-2">
-								<label for="inputMovementFloor" class="col-form-label">Substrate thickness:</label>
+								<label for="inputSubstrateThickness" class="col-form-label">Substrate thickness:</label>
 									<input type="number" class="form-control" name="substrateThickness" id="inputSubstrateThickness" value="1.5">
 									<span class="help-block">Substrate thickness is used to guess the depth of through holes</span>
 							</div>
@@ -194,26 +191,56 @@
 									<span class="help-block">Sets Q for canned peck cycle</span>
 							</div>
 							<div class="col-md-2">
-								<div class="row">
-									<label for="inputWorkPlane" class="col-form-label">Work plane (G54-G58):</label>
-										<input type="number" class="form-control" name="workPlane" id="inputWorkPlane" value="55">
-										<span class="help-block">Set the work plane offsets</span>
-								</div><!-- row -->
-								<div class="row">
-									<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseFeedSpeedInfoTextPreview">Preview Feed/Speed</button>
-									    <div id="collapseFeedSpeedInfoTextPreview" class="collapse scroll-area">
+								<label for="inputWorkPlane" class="col-form-label">Work plane (G54-G58):</label>
+									<input type="number" class="form-control" name="workPlane" id="inputWorkPlane" value="55">
+									<span class="help-block">Set the work plane offsets</span>
+							</div><!-- col -->
+						</div><!--row-->
+						<div class="row">
+							<div class="col-md-2">
+								<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseFeedSpeedInfoTextPreview">Preview Feeds/Speeds</button>
+									<div id="collapseFeedSpeedInfoTextPreview" class="collapse scroll-area">
 										<pre id="feedSpeedInfoTextPreview" stlye="font-family: monospace;"></pre>
 									</div>
-								</div><!-- row -->
-							</div><!-- col -->
+							</div>
+							<div class="col-md-2">
+								<label for="inputPartExtents" class="col-form-label">Part extents:</label>
+									<input type="number" class="form-control" name="partExtentsX" id="inputPartExtentsX" value="75.5" min="0">
+									<input type="number" class="form-control" name="partExtentsY" id="inputPartExtentsY" value="25.5" min="0">
+									<span class="help-block">Length and width of substrate</span>
+							</div>
+							<div class="col-md-2">
+								<label for="inputPartOrigin" class="col-form-label">Part origin:</label>
+									<input type="number" class="form-control" name="partOriginX" id="inputPartOriginX" value="0">
+									<input type="number" class="form-control" name="partOriginY" id="inputPartOriginY" value="0">
+									<span class="help-block">(0,0) Coordinates of drawing</span>
+							</div>
+							<div class="col-md-2">
+							
+								<label for="inputIncludeM01">Include Option Stops
+								<input type="checkbox" id="inputIncludeM01" checked></label>
+								<span class="help-block">Inserts M01 after each tool change</span>
+								<label for="inputBlockNumbers">Number Steps
+								<input type="checkbox" id="inputBlockNumbers" checked></label>
+								<span class="help-block">Inserts line numbers before each tool change</span>
+							</div>
+							<div class="col-md-2">
+								<label for="inputStepdown" class="col-form-label">Step down ratio:</label>
+									<input type="number" class="form-control" name="stepDown" id="inputStepdown" value="0.5" min="0.1" max="1">
+								<span class="help-block">Stepdown (percent of tool diameter)</span>
+							</div>
+							<div class="col-md-2">
+							<label for="inputZRef" class="col-form-label">Return to reference Z:</label>
+									<input type="number" class="form-control" name="zRef" id="inputZRef" value="75.0" min="0">
+							</div>
 						</div><!--row-->
 						
 						<div class = "row">
 							<div class="table-responsive collapse" id="paramTable">
-  								<table class="table-striped table-hover">
-  									<thead>
-      									<tr>
-        									<th>Enable (#)</th>
+								<table class="table-striped table-hover">
+									<thead>
+										<tr>
+											<th>Enable (#)</th>
 											<th>Layer Name</th>
 											<th>Items</th>
 											<th>Type</th>
@@ -230,8 +257,8 @@
 											<th>Z - Floor</th>
 										</tr>
 									</thead>
-									<tbody id="paramTableBody"> </tbody>
-  								</table>	
+									<tbody id="paramTableBody"> Input dxf to edit milling parameters </tbody>
+								</table>	
 							  </div>
 						</div><!--row-->
 					</fieldset>
@@ -335,23 +362,20 @@
 		<div class = "col-md-3"></div>
 		<div class = "row"></div>
 		<div class = "text-center">Copyright 2018</div>
-		
 	</footer>
 	
-	<!--<script language="javascript" type="text/javascript" src="js/modernizr.custom.93389.js"></script>
-    <script language="javascript" type="text/javascript" src="js/sugar-1.2.4.min.js"></script>-->
 	<script language="javascript" type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
 	<script language="javascript" type="text/javascript" src="js/bootstrap.min.js"></script>
-  	<script language="javascript" type="text/javascript" src="js/three.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/three.min.js"></script>
 	<script language="javascript" type="text/javascript" src="js/OrbitControls.js"></script>
 	<script language="javascript" type="text/javascript" src="js/TrackballControls.js"></script>
 	<script language="javascript" type="text/javascript" src="js/dxf-parser.js"></script>
 	<script language="javascript" type="text/javascript" src="js/three-dxf.js"></script>
+	<script language="javascript" type='text/javascript' src='js/dat.gui.min.js'></script>
 	
 	<script language="javascript" type="text/javascript" src="js/gcode-model.js"></script>
 	<script language="javascript" type="text/javascript" src="js/gcode-parser.js"></script>
 	<script language="javascript" type="text/javascript" src="js/gcode-writer.js"></script>
-    <script language="javascript" type="text/javascript" src="js/gcode-renderer.js"></script>
-    
+	<script language="javascript" type="text/javascript" src="js/gcode-renderer.js"></script>
 	<script language="javascript" type="text/javascript" src="index.js"></script>
 </html>

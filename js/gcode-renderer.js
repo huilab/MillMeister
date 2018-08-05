@@ -21,7 +21,6 @@ function createGCodeScene(parent) {
   var scene = new THREE.Scene(); 
   scene.background = new THREE.Color( 0xFFFFFF );
   // Renderer
-  //var renderer = new THREE.WebGLRenderer({clearColor:0xfffffff, clearAlpha: 1});
   var renderer = new THREE.WebGLRenderer( { alpha: true } );
   renderer.setClearColor( 0xffffff, 0 );
   renderer.setSize(width, height);
@@ -45,13 +44,14 @@ function createGCodeScene(parent) {
   // Camera...
   var fov    = 45,
       aspect = width / height,
-      near   = 1,
+      near   = 0.1,
       far    = 10000,
       camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.rotationAutoUpdate = true;
+  
   camera.position.x = 0;
-  camera.position.y = -200;
-  camera.position.z = 200;
+  camera.position.y = -50;
+  camera.position.z = 50;
   camera.lookAt(scene.position);
   scene.add(camera);
   
@@ -91,6 +91,44 @@ function createGCodeScene(parent) {
   //controls.noPan = true;
   //controls.dynamicDampingFactor = 0.15;
 
+  // DAT.GUI Related Stuff  
+  /*var options = {
+    velx: 0,
+    vely: 0,
+    camera: {
+      speed: 0.0001
+    },
+    stop: function() {
+      this.velx = 0;
+      this.vely = 0;
+    },
+    reset: function() {
+      this.velx = 0.1;
+      this.vely = 0.1;
+      camera.position.z = 75;
+      camera.position.x = 0;
+      camera.position.y = 0;
+      cube.scale.x = 1;
+      cube.scale.y = 1;
+      cube.scale.z = 1;
+      cube.material.wireframe = true;
+    }
+  };*/
+
+  /*
+  var gui_controls = {
+    reset: function() {
+      camera.position.z = 50;
+      camera.position.x = 0;
+      camera.position.y = 50;
+    }
+  };
+
+var gui = new dat.GUI();
+var substrate = gui.addFolder("Substrate");
+gui.add( gui_controls, "reset" );
+*/
+
   // Action!
   function render() {
     controls.update();
@@ -101,9 +139,9 @@ function createGCodeScene(parent) {
   render();
 
   // Fix coordinates up if window is resized.
-  $(window).on('resize', function() {
+  $(window).on("resize", function() {
   	width = $parent.innerWidth();
-	height = $parent.innerHeight();
+	  height = $parent.innerHeight();
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -111,6 +149,6 @@ function createGCodeScene(parent) {
     controls.screen.width = width;
   	controls.screen.height = height;
   });
-
+  console.log("gcode scene created");
   return scene;
 }
