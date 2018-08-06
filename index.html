@@ -138,7 +138,9 @@
 								<label>CAD file preview</label>
 							</div>
 							<div class="row">
-								<div id="dxfView" class="drop-zone" title = "dxf File Preview: Right click and drag to pan. Mouse wheel to zoom in or out"></div>
+								<div id="dxfView" class="drop-zone" title = "dxf File Preview: Right click and drag to pan. Mouse wheel to zoom in or out">
+									
+								</div>
 							</div>
 						</div><!--/inputColumn2-->
 					</fieldset>
@@ -314,7 +316,11 @@
 						<div id = "results" class="collapse">
 							<div class="col-md-12">
 								<label>GCode preview</label>
-								<div id="gCodeView" title = "Tool Path Preview: Drag to orbit. Right click and drag to pan. Mouse wheel to zoom in or out"></div>
+								<div id="gcode-gui"></div>
+								<div id="gCodeView" title = "Tool Path Preview: Drag to orbit. Right click and drag to pan. Mouse wheel to zoom in or out">
+								<div class="loader"></div>
+								</div>
+								<div id="gcode-info"></div>
 							</div> <!--/row -2-->
 							<div class="col-md-12">
 								<div class="row">
@@ -364,18 +370,19 @@
 		<div class = "text-center">Copyright 2018</div>
 	</footer>
 	
-	<script language="javascript" type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
-	<script language="javascript" type="text/javascript" src="js/bootstrap.min.js"></script>
-	<script language="javascript" type="text/javascript" src="js/three.min.js"></script>
-	<script language="javascript" type="text/javascript" src="js/OrbitControls.js"></script>
-	<script language="javascript" type="text/javascript" src="js/TrackballControls.js"></script>
+	<script language="javascript" type="text/javascript" src="js/lib/jquery-3.2.1.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/lib/bootstrap.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/lib/three.min.js"></script>
+	<script language="javascript" type="text/javascript" src="js/lib/OrbitControls.js"></script>
+	<script language="javascript" type='text/javascript' src='js/lib/dat.gui.min.js'></script>
+	<script language="javascript" type="text/javascript" src="js/lib/TrackballControls.js"></script>
+	
 	<script language="javascript" type="text/javascript" src="js/dxf-parser.js"></script>
 	<script language="javascript" type="text/javascript" src="js/three-dxf.js"></script>
-	<script language="javascript" type='text/javascript' src='js/dat.gui.min.js'></script>
-	
 	<script language="javascript" type="text/javascript" src="js/gcode-model.js"></script>
 	<script language="javascript" type="text/javascript" src="js/gcode-parser.js"></script>
 	<script language="javascript" type="text/javascript" src="js/gcode-writer.js"></script>
 	<script language="javascript" type="text/javascript" src="js/gcode-renderer.js"></script>
+	<script language="javascript" type="text/javascript" src="js/mill-parameters.js"></script>
 	<script language="javascript" type="text/javascript" src="index.js"></script>
 </html>

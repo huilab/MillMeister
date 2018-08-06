@@ -29,8 +29,7 @@ GCodeParser.prototype.parseLine = function( text, info, mode) {
       var args = {
         "cmd": cmd
       };
-
-      if(args.cmd == "G00") {
+      if(args.cmd === "G00") {
         mode.group01Modal = "G00";
       }
       if(args.cmd == "G01") {
@@ -38,20 +37,25 @@ GCodeParser.prototype.parseLine = function( text, info, mode) {
       }
       
       tokens.splice(1).forEach(function( token ) {
-      	//console.log("splicing:",token);
       	if( token ) {
         	var key = token[0].toLowerCase();
         	var value = parseFloat( token.substring(1) );
         	args[ key ] = value;
+        	if(key == "f" && mode.group01Modal == "G01") {
+        		mode.modalFeedRate = value;
+        	}
         }
       });
       var handler = this.handlers[ args.cmd ] || this.handlers["default"];
       if (handler) {
         if( handler == this.handlers["default"] && mode.group01Modal != "None") {
           var key = args.cmd[0].toLowerCase();
-        	var value = parseFloat( args.cmd.substring(1) );
-        	args[ key ] = value;
+          var value = parseFloat( args.cmd.substring(1) );
+          args[ key ] = value;
           args.cmd = mode.group01Modal;
+          if(args.f == undefined) {
+            args.f = mode.modalFeedRate;
+          }
           var handler = this.handlers[ args.cmd ] || this.handlers["default"];
         }
         return handler(args, info);
@@ -64,7 +68,10 @@ GCodeParser.prototype.parseLine = function( text, info, mode) {
 };
 
 GCodeParser.prototype.parse = function( gcode ) {
-  var mode = {group01Modal: "None"};
+  var mode = {
+  	group01Modal: "None",
+  	modalFeedRate: 0
+  };
   var lines = gcode.split("\n");
   for ( var i = 0; i < lines.length; i++ ) {
     if ( this.parseLine( lines[i], i, mode) === false ) {

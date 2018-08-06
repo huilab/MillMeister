@@ -55,9 +55,8 @@ function createGCodeScene(parent) {
   camera.lookAt(scene.position);
   scene.add(camera);
   
-  //TK add arrow orientation thing to origin
-    //add arrow helper
-    var origin = new THREE.Vector3( 0, 0, 0 );
+  //add arrow helper
+  var origin = new THREE.Vector3( 0, 0, 0 );
 	var x_dir = new THREE.Vector3( 1, 0, 0 );
 	var y_dir = new THREE.Vector3( 0, 1, 0 );
 	var z_dir = new THREE.Vector3( 0, 0, 1 );
@@ -69,15 +68,13 @@ function createGCodeScene(parent) {
 	z_dir.normalize();
 	
 	var length = 10;
-	var hex = 0xffff00;
 
-	var arrowHelper = new THREE.ArrowHelper( x_dir, origin, length, 0xff0000 );
+	var arrowHelper = new THREE.ArrowHelper( x_dir, origin, length, 0xff0000, 0.2*length, 0.1*length );
 	scene.add( arrowHelper );
-	var arrowHelper2 = new THREE.ArrowHelper( y_dir, origin, length, 0x00ff00 );
+	var arrowHelper2 = new THREE.ArrowHelper( y_dir, origin, length, 0x00ff00, 0.2*length, 0.1*length );
 	scene.add( arrowHelper2 );
-	var arrowHelper3 = new THREE.ArrowHelper( z_dir, origin, length, 0x0000ff );
+	var arrowHelper3 = new THREE.ArrowHelper( z_dir, origin, length, 0x0000ff, 0.2*length, 0.1*length );
 	scene.add( arrowHelper3 );
-	
 	
 	// create a set of coordinate axes to help orient user
 	// specify length in pixels in each direction
@@ -91,43 +88,38 @@ function createGCodeScene(parent) {
   //controls.noPan = true;
   //controls.dynamicDampingFactor = 0.15;
 
-  // DAT.GUI Related Stuff  
-  /*var options = {
-    velx: 0,
-    vely: 0,
-    camera: {
-      speed: 0.0001
-    },
-    stop: function() {
-      this.velx = 0;
-      this.vely = 0;
-    },
-    reset: function() {
-      this.velx = 0.1;
-      this.vely = 0.1;
-      camera.position.z = 75;
-      camera.position.x = 0;
-      camera.position.y = 0;
-      cube.scale.x = 1;
-      cube.scale.y = 1;
-      cube.scale.z = 1;
-      cube.material.wireframe = true;
-    }
-  };*/
 
-  /*
-  var gui_controls = {
-    reset: function() {
-      camera.position.z = 50;
-      camera.position.x = 0;
-      camera.position.y = 50;
-    }
-  };
+var substrateLength = document.getElementById("inputPartExtentsX").value;
+var substrateWidth = document.getElementById("inputPartExtentsY").value;
+var substrateHeight = document.getElementById("inputSubstrateThickness").value;
+var substrateGeo = new THREE.BoxGeometry( substrateLength, substrateWidth, substrateHeight );
+var substrateMat = new THREE.MeshBasicMaterial( {color: 0x00ff00, transparent:true, opacity:0.5 } );
+var substrateBox = new THREE.Mesh( substrateGeo, substrateMat );
 
-var gui = new dat.GUI();
-var substrate = gui.addFolder("Substrate");
-gui.add( gui_controls, "reset" );
-*/
+//add the substrate geo to the scene
+substrateBox.position.set(substrateLength/2, substrateWidth/2, -substrateHeight/2);
+scene.add( substrateBox );
+
+
+var gcodeViewGui = new dat.GUI( { autoPlace: false } );
+var myContainer = document.getElementById('gcode-gui');
+myContainer.appendChild(gcodeViewGui.domElement);
+//gcodeViewGui.domElement.id = "gcode-gui";
+var gui_controls = {
+  reset: function() {
+    camera.position.x = 0;
+    camera.position.y = -50;
+    camera.position.z = 50;
+    camera.lookAt(scene.position);
+  }
+};
+
+//var gcodeViewGui = new dat.GUI( );
+//var  = gcodeViewGui.addFolder("Substrate");
+gcodeViewGui.add( gui_controls, "reset" ).name("Reset camera");
+gcodeViewGui.add( substrateBox, 'visible' ).name("Show substrate");
+
+	
 
   // Action!
   function render() {

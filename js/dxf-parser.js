@@ -457,7 +457,7 @@ DxfParser.prototype._parse = function(dxfString) {
 
 	scanner = new DxfArrayScanner(dxfLinesArray);
 	if(!scanner.hasNext()) throw Error('Empty file');
-	console.log("_parse parsing");
+	console.log("Parsing dxf");
 	var parseAll = function() {
 		curr = scanner.next();
 		while(!scanner.isEOF()) {

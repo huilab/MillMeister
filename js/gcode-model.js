@@ -28,6 +28,7 @@ function createObjectFromGCode(gcode, scene) {
 	var circles = [];
 	//var layer = undefined;
 	var bbbox = { min: { x:100000,y:100000,z:100000 }, max: { x:-100000,y:-100000,z:-100000 } };
+	var estimatedMillTime = 0;
 	
 	//adds a new layer
 	/*function newLayer(line) {
@@ -80,15 +81,25 @@ function createObjectFromGCode(gcode, scene) {
 	// p1 is the last line
 	// p2 is the new line
 	function addSegment(p1, p2, material) {
-		var geometry = new THREE.Geometry();
-		geometry.vertices.push(
-			new THREE.Vector3(p1.x, p1.y, p1.z));
-		geometry.vertices.push(
-			new THREE.Vector3(p2.x, p2.y, p2.z));
+		var geometry = new THREE.Geometry(),
+		time,
+		line,
+		p1vec,
+		p2vec;
+		p1vec = new THREE.Vector3(p1.x, p1.y, p1.z);
+		p2vec = new THREE.Vector3(p2.x, p2.y, p2.z);
+		geometry.vertices.push(p1vec);
+			
+		geometry.vertices.push(p2vec);
+			
 		//geometry.colors.push(p1.color);
 		//geometry.colors.push(p2.color);
-		var line = new THREE.Line(geometry, material);
+		line = new THREE.Line(geometry, material);
 		lines.push(line);
+		if(p2.f > 0) {
+			time = p1vec.distanceTo(p2vec) / p2.f;
+			estimatedMillTime += time;
+		}
 	}//addSegment
 	
 	function addCircleMark(coordinates, material) {
@@ -271,9 +282,6 @@ function createObjectFromGCode(gcode, scene) {
   console.log("Gcode Model::Parsing gcode... ");
   parser.parse(gcode);
 
-	//if(layers
- //console.log("Gcode Model::Layer Count ", layers.length);
-
 	var object = new THREE.Object3D();
 	
   for (var idx in lines) {
@@ -312,6 +320,8 @@ function createObjectFromGCode(gcode, scene) {
 	console.log("adding gcode object to scene... ");
 	scene.add(object);
 	
+	
+	
 	//add bounding box wireframe
 	var boundGeo = new THREE.Geometry();
 		boundGeo.vertices.push(
@@ -327,13 +337,17 @@ function createObjectFromGCode(gcode, scene) {
 	
 
 	var geo = new THREE.EdgesGeometry( boundGeo ); // or WireframeGeometry( geometry )
-
-	var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-	
+	var mat = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 2 } );
 	var wireframe = new THREE.LineSegments( geo, mat );
-
+	wireframe.position = center.multiplyScalar(-scale);
+	wireframe.scale.multiplyScalar(scale);
 	scene.add( wireframe );
 	console.log("adding bounding box... ");
+	
+	var estimateString = "Estimated job time: " + estimatedMillTime.toFixed(2) + " min";
+	console.log(estimateString);
+	var gcodeInfoElm = document.getElementById("gcode-info");
+	gcodeInfoElm.innerHTML = estimateString;
 
 	/*
 	var geometry1 = new THREE.BoxGeometry( 1,1,1 );

@@ -369,7 +369,9 @@ function convertDxfToGCode(dxfGeo) {
 		
 		//write layer description
 		fileText += e; // leave a blank line before the comment block
-		fileText += "N" + step + e; // add block numbers
+		if(addBlockNumbers) {
+			fileText += "N" + step + e; // add block numbers
+		}
 		fileText += "(----------------------------)" + e; 
 		fileText += "(--Step " + step + " of " + process_order.length + "--)" + e;
 		fileText += "(Layer name: "+ layerName + " )" + e;
@@ -405,6 +407,11 @@ function convertDxfToGCode(dxfGeo) {
 			logText += data[1];
 			break;
 		case "LWPOLYLINE":
+			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, toolDiameter);
+			fileText += data[0];
+			logText += data[1];
+			break;
+		case "POLYLINE":
 			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, toolDiameter);
 			fileText += data[0];
 			logText += data[1];

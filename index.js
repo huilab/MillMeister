@@ -5,7 +5,7 @@
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 // Based on convertumill2gcode by Phil Duncan
 
-const VERSION_NAME = "MillMeister Version 1.1.1 build 5";
+const VERSION_NAME = "MillMeister Version 1.2";
 
 var gCodeBlob = null;
 var gCodeFileName = null;
@@ -16,8 +16,26 @@ var jobInfoContents = null;
 var zmap = {a:0,b:0,c:0};
 var selectedSubstrate = null;
 
-var progress = document.getElementById("file-progress-bar");
+var dxfLoadProgress = document.getElementById("file-progress-bar");
 var $progress = $(".progress");
+var parser = new window.DxfParser();
+var demoFileName = "data/demo.dxf";
+
+var gCodeViewDiv = document.getElementById("gCodeView");
+var gCodeGuiDiv = document.getElementById("gcode-gui");
+
+var saveBlob = (function () {
+	var a = document.createElement("a");
+	document.body.appendChild(a);
+	a.style = "display: none";
+	return function (blob, fileName) {
+		var url = window.URL.createObjectURL(blob);
+		a.href = url;
+		a.download = fileName;
+		a.click();
+		window.URL.revokeObjectURL(url);
+	};
+})
 
 var speeds = {
 	"COC" : [
@@ -52,6 +70,12 @@ $(document).ready(function(){
 	document.getElementById("substrateSelect").innerHTML = fillSubstrates( speeds );
 	document.getElementById("collapseFeedSpeedInfoTextPreview").innerHTML = fillFeedsSpeeds( speeds );
 
+	//attach event listeners
+	document.getElementById("dxfView").addEventListener("dragover", onDragOver, false);
+	document.getElementById("dxfView").addEventListener("drop", onDrop, false);
+	document.getElementById("dxfSelect").addEventListener("change", onDxfFileSelected, false);
+	document.getElementById("vMapSelect").addEventListener("change", onMapFileSelected, false);
+
 	console.log( VERSION_NAME );
 	if (localStorage) {
 		tryLoadUserInfo();
@@ -59,6 +83,23 @@ $(document).ready(function(){
 		console.log("No local storage support");
 	}	
 }) 
+
+$.ajax({
+	type:    "GET",
+	url:     demoFileName,
+	success: function(text) {
+			// `text` is the file text
+			console.log("got demo file text");
+			parseDxfText(text);
+			document.getElementById("fileDescription").innerHTML = "<ul><li><strong>" + demoFileName + "</li></ul>";
+			dxfLoadProgress.style.width = "100%";
+			dxfLoadProgress.textContent = "Demo Loaded";
+	},
+	error:   function() {
+			// An error occurred
+			console.log("error opening demo file");
+	}
+});
 
 
 function fillSubstrates( speeds ) {
@@ -102,14 +143,6 @@ document.getElementById("substrateSelect").onchange = function() {
   document.getElementById("collapseFeedSpeedInfoTextPreview").innerHTML = fillFeedsSpeeds(speeds);
 }
 
-
-
-//event listeners
-document.getElementById("dxfView").addEventListener("dragover", onDragOver, false);
-document.getElementById("dxfView").addEventListener("drop", onDrop, false);
-document.getElementById("dxfSelect").addEventListener("change", onDxfFileSelected, false);
-document.getElementById("vMapSelect").addEventListener("change", onMapFileSelected, false);
-
 function onDragOver(evt) {
 	evt.stopPropagation();
 	evt.preventDefault();
@@ -141,13 +174,12 @@ function onDxfFileSelected( evt ) {
 	loadDxfFile( file );
 }
 
-
 function loadDxfFile( file ) {
 	var output = [];
 	var reader = new FileReader();
 
-	progress.style.width = "0%";
-	progress.textContent = "0%";
+	dxfLoadProgress.style.width = "0%";
+	dxfLoadProgress.textContent = "0%";
 	$progress.addClass("loading");
 
 	//display file info
@@ -229,12 +261,11 @@ function errorHandler(evt) {
 }
 
 function updateProgress(evt) {
-	console.log(Math.round((evt.loaded /evt.total) * 100));
 	if(evt.lengthComputable) {
 		var percentLoaded = Math.round((evt.loaded /evt.total) * 100);
 		if (percentLoaded < 100) {
-			progress.style.width = percentLoaded + "%";
-			progress.textContent = percentLoaded + "%";
+			dxfLoadProgress.style.width = percentLoaded + "%";
+			dxfLoadProgress.textContent = percentLoaded + "%";
 		}
 	}
 }
@@ -242,15 +273,18 @@ function updateProgress(evt) {
 function onDxfReadSuccess(evt){
 	// load in DXF file
 	var fileReader = evt.target;
-	if(fileReader.error) return console.log("error on load end");
+	if(fileReader.error) return console.log("filereader error");
 
-
-	progress.style.width = "100%";
-	progress.textContent = "100%";
+	dxfLoadProgress.style.width = "100%";
+	dxfLoadProgress.textContent = "100%";
 	setTimeout(function() { $progress.removeClass("loading"); }, 2000);
 
-	var parser = new window.DxfParser();
-	var dxf = parser.parseSync(fileReader.result);
+	
+	parseDxfText(fileReader.result);
+}
+
+function parseDxfText(text) {
+	var dxf = parser.parseSync(text);
 	
 	// generate text preview
 	var textPreview = document.getElementById("dxfTextPreview");
@@ -285,7 +319,7 @@ function onDxfReadSuccess(evt){
 		// Function called when download progresses
 		function ( xhr ) {
 			console.log("Loading font");
-			console.log( (xhr.loaded / xhr.total * 100) + "% loaded" );
+			console.log( (xhr.loaded / xhr.total * 100) + "% font loaded" );
 		},
 		// Function called when download errors.
 		// Load scene without the font
@@ -303,7 +337,7 @@ function onDxfReadSuccess(evt){
 	document.getElementById("paramTableBody").innerHTML = buildTable(dxfGeo);
 }
 
-// 
+// enforce numbered program conventions from HAAS
 function setFiveDigit(elm) {
 	var newValue = elm.value.toString();
 	var digits = newValue.length;
@@ -314,224 +348,6 @@ function setFiveDigit(elm) {
 	elm.value = newValue;
 }
 
-// prepares the main tool parameter table
-function buildTable(dxfGeo){
-	//default maxDepth is 1.0mm (0.04")
-	var maxDepth = document.getElementById("inputSubstrateThickness").value;
-	var tableText = "";
-	var stepCount = 0;
-	
-	for (var i=0; i<dxfGeo.layers.length; ++i) {
-		var layerName = dxfGeo.layers[i].name;
-		var tool = guessToolType(layerName);
-		var toolDiameter = guessToolDiameter(layerName);
-		var depth = guessDepth(layerName, maxDepth);
-		var feed = guessFeedSpeed(toolDiameter, 1, 100.0);
-		var plunge = guessFeedSpeed(toolDiameter, 2, 50.0);
-		
-		//set the processing order to zero if the layer is not enabled
-		//if the layer is enabled, increment the number of layers
-		//processed and set this layer to the next number
-		var opOrder = 0;
-
-		if( tool != "Unknown" ) {
-			stepCount++;
-			opOrder = stepCount;
-		}
-		
-		tableText+="<tr>";
-		/*tableText+=generateTableRow(
-		opOrder, dxfGeo.layers[i].contents.length, 
-		dxfGeo.layers[i].type, dxfGeo.layers[i].color, 
-		layerName, tool, toolDiameter, depth, feed, plunge);
-		tableText +="</tr>";	*/
-
-		tableText+=generateTableRow(
-			opOrder, dxfGeo.layers[i], tool, 
-			toolDiameter, depth, feed, plunge);
-			tableText +="</tr>";
-
-
-	}
-	return tableText;
-};
-//function generateTableRow(opOrder, layer, type, color, layerName, tool, toolDiameter, depth, feed, plunge) {
-function generateTableRow(opOrder, layer, tool, toolDiameter, depth, feed, plunge) {
-	var layerName = layer.name;
-	var type = layer.type;
-	var color = layer.color;
-	var count = layer.contents.length;
-	//col 0 checkbox to enable
-	var text="<td><input type=\"checkbox\" name=\"" + layerName + 
-	"\" id=\"" + layerName + "\" " + (tool == "Unknown" ? "" : "checked") + ">" + 
-	"<input type=\"number\" name=\""+ layerName.concat("processOrder") +
-	"\" id=\""+layerName.concat("processOrder") + "\" value= \"" + opOrder	 + "\" min = \"0\"></td>";
-	// with label included
-	/*var text="<td><label for=\"" + layerName + "\">#<input type=\"checkbox\" name=\"" + layerName + 
-	"\" id=\"" + layerName + "\" " + (tool == "Unknown" ? "" : "checked") + ">" + 
-	"<input type=\"number\" name=\""+ layerName.concat("processOrder") +
-	"\" id=\""+layerName.concat("processOrder") + "\" value= \"" + opOrder	 + "\" min = \"0\" max = \"" + layer.length +"\"></label></td>";*/
-
-
-	//col 1 name
-	text+="<td>" + layerName + " </td>";
-
-	//col 2 entity count
-	text+="<td>" + count + " </td>";
-
-	//col 3 type
-	text+="<td>" + type + "</td>"
-
-	//col 4 color
-	text+="<td>" + color + "</td>";
-
-	//col 5 tool type. guess the tool from the name
-	//tableText+="<td><div id=\""+layerName.concat("toolType")+ "\">" + tool + "</td>";
-	text+="<td><select class=\"form-control\" id=\"" + layerName.concat("toolType") + "\">";
-	if(tool == "Drill") {
-		text+="<option selected value = \"Drill\">Drill</option>" +
-		"<option value = \"Endmill\">Endmill</option>" +
-		"<option value = \"Unknown\">Unknown</option>";
-	}
-	else if(tool == "Endmill"){
-		text+="<option value = \"Drill\">Drill</option>" +
-		"<option selected value = \"Endmill\">Endmill</option>" +
-		"<option value = \"Unknown\">Unknown</option>";
-	}
-	else{
-		text+="<option value = \"Drill\">Drill</option>" +
-		"<option value = \"Endmill\">Endmill</option>" +
-		"<option selected value = \"Unknown\">Unknown</option>";
-	}
-	text += "</select></td>"; 
-
-	//col 6 tool diameter
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("diameter") +
-	"\" id=\""+layerName.concat("diameter") + "\" value=" + toolDiameter + "></td>";
-
-	//col 7 tool number. requires manual editing
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("toolNumber") +
-	"\" id=\""+layerName.concat("toolNumber") + "\" value=" + 0 + "></td>";
-
-	//col 8 guess the depth from the name
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("depth") +
-	"\" id=\""+layerName.concat("depth") + "\" value=" + depth + "></td>";
-
-	//col 9 guess the feed from the tool and material
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("feed") +
-	"\" id=\""+layerName.concat("feed") + "\" value=" + feed + "></td>";
-
-	//col 10
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("plunge") +
-	"\" id=\""+layerName.concat("plunge") + "\" value=" + plunge + "></td>";
-
-	//col 11
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("rpm") +
-	"\" id=\""+layerName.concat("rpm") + "\" value=" + 6000 + "></td>";
-
-	//col 12 spindle direction is CW or CCW TK TODO: add support for CCW tools
-	text+="<td>CW</td>";
-
-	//col 13 default to plane correction
-	text+="<td><input type=\"checkbox\" name=\""+ layerName.concat("zCorrect") + 
-	"\" id=\"" + layerName.concat("zCorrect") + "\"></td>";
-
-	// col 14 movement floor
-	text+="<td><input type=\"number\" name=\""+ layerName.concat("movementFloor") +
-	"\" id=\""+layerName.concat("movementFloor") + "\" value=" + 1.0 + "></td>";
-	
-	return text;
-}
-
-function guessToolType(layerName) {
-	if(layerName.search(/ Drill /i) >= 0) {
-		return "Drill";
-	}
-	else if(layerName.search(/ Endmill /i) >= 0) {
-		return "Endmill"
-	}
-	else if(layerName.search(/ EM /i) >= 0) {
-		return "Endmill"
-	}
-	else if(layerName.search(/ D /i) >= 0) {
-		return "Drill";
-	}
-	else {
-		return "Unknown"
-	}
-};
-
-// Assume diameter is second word of layer name
-// TK change to search the word before and after the toolType
-function guessToolDiameter(layerName) {
-	var diameter = 0.02; //default to 200 micron
-	var words = layerName.split(" "); // split by spacing
-	if(words.length >= 2) { //check there are at least two words
-		var n = words[1].search(/mm/i);
-		//var n = words[1].indexOf("mm"); //check for a layer in mm
-		if(n > 0){
-			return parseFloat(words[1].substring(0,n));
-		}
-		//if not mm, check for inches
-		n = words[1].search(/in/i);
-		//n = words[1].indexOf("in");
-		if(n > 0){
-			return parseFloat(words[1].substring(0,n));
-		}
-	}
-	//nothing was found, return default value
-	return diameter;
-}
-
-// asume depth is the fourth word
-function guessDepth(name, maxDepth) {
-	var depth = 0;
-	var words = name.split(" ");
-	//search each word
-	for(var i = 0; i<words.length; ++i) {
-		var n = words[i].search(/Z/i);
-		if(n >= 0){//found " Z "
-			if(i < words.length - 1){
-				// case insensitive search for mm
-				var m = words[i+1].search(/mm/i);
-				//case insensitive seach for in
-				var inch = words[i+1].search(/in/i);
-
-				//through
-				var thru1 = words[i+1].search(/thru/i);
-				var thru2 = words[i+1].search(/through/i);
-
-				if(m >=0){
-					return parseFloat(words[i+1]);
-				}
-				else if(inch >=0){
-					return parseFloat(words[i+1]);
-				}
-				else if(thru1 >=0 || thru2 >=0){
-					return maxDepth;
-				}
-			}
-		}
-	}
-	return depth;
-};
-
-function guessFeedSpeed(toolDiameter, index, defaultValue) {
-	var returnValue = defaultValue;
-	Object.entries(speeds).forEach(
-		([key, value]) => {
-			if(key == selectedSubstrate) {
-				for (var i = 0; i < value.length; i++) {
-					if(value[i][0]>=toolDiameter) {
-						returnValue = value[i][index];
-						return;
-					}
-				}
-			}
-		}
-	);
-	return returnValue;
-}
 
 function generateGCode() {	
 	var data = convertDxfToGCode(dxfGeo);
@@ -546,80 +362,28 @@ function generateGCode() {
 	
 	gCodeBlob = new Blob([gCodeContents], {endings: "transparent"});
 	jobInfoBlob = new Blob([jobInfoContents], {endings: "transparent"});
+	//<div class="loader"></div>
 	openGCodeFromText(data[1]);
 	openJobInfoFromText(data[3]);
 	
 	saveUserInfo();
 }
 
-function saveUserInfo() {
-	var opNum = document.getElementById("inputOperationNumber").value;
-	localStorage.setItem("opNum", opNum);
-	var name = document.getElementById("inputName").value;
-	localStorage.setItem("name", name);
-	var pi = document.getElementById("inputPI").value;
-	localStorage.setItem("pi", pi);
-	var partName = document.getElementById("inputPartName").value;
-	localStorage.setItem("partName", partName);
-	var email = document.getElementById("inputEmail").value;
-	localStorage.setItem("email", email);
-	var phone = document.getElementById("inputPhone").value;
-	localStorage.setItem("phone", phone);
-	console.log("saved settings to local storage");
-}
-
-function tryLoadUserInfo() {
-	console.log("loading settings from local storage");
-	// Retrieve saved data from last use
-	var opNum = localStorage.getItem("opNum");
-	if (opNum != "undefined" && opNum != "null") {
-		document.getElementById("inputOperationNumber").value = opNum;
-	}
-	var name = localStorage.getItem("name");
-	if (name != "undefined" && name != "null") {
-		document.getElementById("inputName").value = name;
-	}
-	var pi = localStorage.getItem("pi");
-	if (pi != "undefined" && pi != "null") {
-		document.getElementById("inputPI").value = pi;
-	}
-	var partName = localStorage.getItem("partName");
-	if (partName != "undefined" && partName != "null") {
-		document.getElementById("inputPartName").value = partName;
-	}
-	var email = localStorage.getItem("email");
-	if (email != "undefined" && email != "null") {
-		document.getElementById("inputEmail").value = email;
-	}
-	var phone = localStorage.getItem("phone");
-	if (phone != "undefined" && phone != "null") {
-		document.getElementById("inputPhone").value = phone;
-	}
-}
-
 function openGCodeFromText(gcode) {
-	var toolPathDiv = document.getElementById("gCodeView");
-
-	while(toolPathDiv.firstChild){
-		toolPathDiv.removeChild(toolPathDiv.firstChild);
+	// clear out the gCodeViewDiv
+	while(gCodeViewDiv.firstChild){
+		gCodeViewDiv.removeChild(gCodeViewDiv.firstChild);
 	}
-	var textPreview = document.getElementById("gCodeTextPreview");
-	var scene = createGCodeScene(toolPathDiv);
-	var substrateLength = document.getElementById("inputPartExtentsX").value;
-	var substrateWidth = document.getElementById("inputPartExtentsY").value;
-	var substrateHeight = document.getElementById("inputSubstrateThickness").value;
-	var substrateGeo = new THREE.BoxGeometry( substrateLength, substrateWidth, substrateHeight );
-	var substrateMat = new THREE.MeshBasicMaterial( {color: 0x00ff00, transparent:true, opacity:0.5 } );
-	var substrateBox = new THREE.Mesh( substrateGeo, substrateMat );
-	
+	while(gCodeGuiDiv.firstChild){
+		gCodeGuiDiv.removeChild(gCodeGuiDiv.firstChild);
+	}
+	// repopulate gCodeViewDiv
+	var scene = createGCodeScene(gCodeViewDiv);
 	// create toolpath geo and add to scene
 	createObjectFromGCode(gcode, scene);
-	
-	//add the substrate geo to the scene
-	substrateBox.position.set(substrateLength/2, substrateWidth/2, -substrateHeight/2);
-	scene.add( substrateBox );
 
 	// add gcode file contents to preview
+	var textPreview = document.getElementById("gCodeTextPreview");
 	textPreview.innerHTML = gcode;//JSON.stringify(gcode, null, 4);
 }
 
@@ -640,19 +404,35 @@ function saveJobInfoFile() {
 	}
 }
 
-var saveBlob = (function () {
-	var a = document.createElement("a");
-	document.body.appendChild(a);
-	a.style = "display: none";
-	return function (blob, fileName) {
-		var url = window.URL.createObjectURL(blob);
-		a.href = url;
-		a.download = fileName;
-		a.click();
-		window.URL.revokeObjectURL(url);
-	};
+function saveUserInfo() {
+	function saveInfo(itemName, elementId) {
+		var temp = document.getElementById(elementId).value;
+		localStorage.setItem(itemName, temp);
+	}
+	saveInfo("opNum","inputOperationNumber");
+	saveInfo("name","inputName");
+	saveInfo("pi","inputPI");
+	saveInfo("partName","inputPartName");
+	saveInfo("email","inputEmail");
+	saveInfo("phone","inputPhone");
+	console.log("saved settings to local storage");
 }
 
+function tryLoadUserInfo() {
+	console.log("Loading settings from local storage");
+	function tryLoad(itemName, elementId) {
+		var temp = localStorage.getItem(itemName);
+		if (temp != "undefined" && temp != "null" && temp != "") {
+			document.getElementById(elementId).value = temp;
+		}
+	}
+	tryLoad("opNum", "inputOperationNumber");
+	tryLoad("name", "inputName");
+	tryLoad("pi", "inputPI");
+	tryLoad("partName", "inputPartName");
+	tryLoad("email", "inputEmail");
+	tryLoad("phone", "inputPhone");
+}
 /*
 // disable table rows using first row checkboxes
 //https://jsfiddle.net/ddan/1rhrco48/
@@ -661,4 +441,3 @@ $("tr td:first-child input[type="checkbox"]").click( function() {
    $(this).closest("tr").find(":input:not(:first)").attr("disabled", !this.checked);
 });*/
 
-());
