@@ -102,6 +102,12 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, zAdjustEnable
 		//rapid to start point
 		text += "G00 X"+ x1 + " Y"+ y1 + " Z" + floor + e;
 		//lower tool to surface
+		var surface = 0;
+		/*if(zAdjustEnabled) {
+			surface = zAdjust(line.vertices[0],0);
+		}
+
+		text += "G01 Z" + surface + " F" + plunge + e;*/
 		text += "G01 Z0." + " F" + plunge + e;
 		
 		object_count++;

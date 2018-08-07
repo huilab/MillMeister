@@ -5,7 +5,7 @@
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 // Based on convertumill2gcode by Phil Duncan
 
-const VERSION_NAME = "MillMeister Version 1.2.1 build 2";
+const VERSION_NAME = "MillMeister Version 1.2.1";
 
 var gCodeBlob = null;
 var gCodeFileName = null;
