@@ -5,7 +5,7 @@
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 // Based on convertumill2gcode by Phil Duncan
 
-const VERSION_NAME = "MillMeister Version 1.2";
+const VERSION_NAME = "MillMeister Version 1.2.1 build 2";
 
 var gCodeBlob = null;
 var gCodeFileName = null;
@@ -82,24 +82,25 @@ $(document).ready(function(){
 	} else {
 		console.log("No local storage support");
 	}	
+	$.ajax({
+		type:    "GET",
+		url:     demoFileName,
+		success: function(text) {
+				// `text` is the file text
+				console.log("got demo file text");
+				parseDxfText(text);
+				document.getElementById("fileDescription").innerHTML = "<ul><li><strong>" + demoFileName + "</li></ul>";
+				dxfLoadProgress.style.width = "100%";
+				dxfLoadProgress.textContent = "Demo Loaded";
+		},
+		error:   function() {
+				// An error occurred
+				console.log("error opening demo file");
+		}
+	});
 }) 
 
-$.ajax({
-	type:    "GET",
-	url:     demoFileName,
-	success: function(text) {
-			// `text` is the file text
-			console.log("got demo file text");
-			parseDxfText(text);
-			document.getElementById("fileDescription").innerHTML = "<ul><li><strong>" + demoFileName + "</li></ul>";
-			dxfLoadProgress.style.width = "100%";
-			dxfLoadProgress.textContent = "Demo Loaded";
-	},
-	error:   function() {
-			// An error occurred
-			console.log("error opening demo file");
-	}
-});
+
 
 
 function fillSubstrates( speeds ) {
@@ -141,6 +142,10 @@ document.getElementById("substrateSelect").onchange = function() {
   selectedSubstrate = inputText;
   console.log("Substrate changed to: " + selectedSubstrate);
   document.getElementById("collapseFeedSpeedInfoTextPreview").innerHTML = fillFeedsSpeeds(speeds);
+}
+
+document.getElementById("inputSubstrateThickness").onchange = function() {
+  buildAndShowParameterTable();
 }
 
 function onDragOver(evt) {
@@ -232,9 +237,9 @@ function onMapReadSuccess(evt) {
 		output.push("D = ",coefficients[0],"x + ",coefficients[1]," y + ",coefficients[2]," z");
 		document.getElementById("mapDescription").innerHTML = "<ul>" + output.join("") + "</ul>";
 	
-		zmap.a = coefficients[0];
-		zmap.b = coefficients[1];
-		zmap.c = coefficients[2];
+		zmap.a = parseFloat(coefficients[0]);
+		zmap.b = parseFloat(coefficients[1]);
+		zmap.c = parseFloat(coefficients[2]);
 	}
 	else {
 		console.warn("Z-plane data does not contain at least three terms");
@@ -330,6 +335,10 @@ function parseDxfText(text) {
 	);
 	
 	// populate a table from DXF layer data
+	buildAndShowParameterTable();
+}
+
+function buildAndShowParameterTable() {
 	var tableDiv = $("#paramTable");
 	if (!tableDiv.is(":visible")) {
 		tableDiv.collapse("toggle");

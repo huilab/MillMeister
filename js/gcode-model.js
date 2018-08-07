@@ -28,8 +28,10 @@ function createObjectFromGCode(gcode, scene) {
 	var circles = [];
 	//var layer = undefined;
 	var bbbox = { min: { x:100000,y:100000,z:100000 }, max: { x:-100000,y:-100000,z:-100000 } };
-	var estimatedMillTime = 0;
 	
+	var estimatedMillTime = 0;
+	console.log("mill time estimate initialized: ",estimatedMillTime);
+
 	//adds a new layer
 	/*function newLayer(line) {
 		layer = { type: {}, layer: layers.count(), z: line.z, };

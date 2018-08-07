@@ -8,25 +8,19 @@
 
 var warningCount;
 
-function zAdjust(x, y, z) {
-	var adjusted;
-	adjusted.x = x;
-	adjusted.y = y;
-	adjusted.z = z;
-	
-	console.log("Adjusting point using plane alignment method...");
-	if(zmap.length != 3) {
-		console.log("Plane map data is not formatted correctly. Returning...");
-		return adjusted;
-	}
-	else {
-		//TK check math taken from AutoLisp script
+function zAdjust(vertex, depth) {
+	var adjustedDepth = depth;
+	if(zmap.a !== undefined && zmap.b !== undefined && zmap.c !== undefined ) {
 		console.log("Plane eq:a:", zmap.a, " b:", zmap.b, " c:",  zmap.c);
 		//adjusted.z = z - (0.004 - 0.0000378) * y * 0.00029;
 		//(setq zposp (+ zpos (* a xpos) (* b ypos) c))
-		adjusted.z = z + (zmap.a*x) + (zmap.b*y) + zmap.c;
-		console.log("Mapped z(",x,",",y,"):", z, " to:", adjusted.z);
-		return adjusted;
+		adjustedDepth = vertex.z + (zmap.a*vertex.x) + (zmap.b*vertex.y) + zmap.c;
+		console.log("Mapped z(",vertex.x,",",vertex.y,"):", depth, " to:", adjustedDepth);
+		return adjustedDepth;
+	}
+	else {
+		console.log("Plane map data is not formatted correctly. Returning...");
+		return depth;
 	}
 }
 
@@ -47,7 +41,7 @@ function distance2D(x1, y1, x2, y2) {
 }
 
 //TODO: if units are in --> fixed(4), if units are mm --> fixed(3)
-function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter) {
+function processLines(layer, depth, stepDown, floor, feed, plunge, zAdjustEnabled) {
 	var currentDepth = 0;
 	var e = "\r\n";
 	
@@ -56,6 +50,10 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 	
 	logText += "Line Layer...Name: " + layer.name + "..." + e;
 	logText += "Stepdown: " + stepDown + " " + " floor: " + floor + e;
+
+	if(zAdjustEnabled) {
+		logText += "Z plane correction for line ops is disabled" + e;
+	}
 	
 	var object_count = 0;
 	var line_count = 0;
@@ -65,7 +63,13 @@ function processLines(layer, depth, stepDown, floor, feed, plunge, toolDiameter)
 	var n_objects = layer.contents.length;
 	for(var i = 0; i<n_objects; ++i) {
 		var line = layer.contents[i];
-		
+		/*if(zAdjustEnabled) {
+			var adjustedLine = line;
+			for(var i = 0; i<line.vertices.length; ++i){
+				adjustedLine.vertices[i] = zAdjust(line.vertices[i], depth);
+			}
+			line = adjustedLine;
+		}*/
 		// check what kind of object it is
 		if(line.type == "LINE") {
 			line_count++;
@@ -196,13 +200,16 @@ function findNextCutDepth(currentDepth, stepDown, target) {
  * @param {*} floor 
  * @param {*} feed 
  */
-function processCircles(layer, depth, floor, increment, plunge) {
+function processCircles(layer, depth, floor, increment, plunge, zAdjustEnabled) {
 	var logText = "";
 	var text = "";
 	var e = "\r\n";
 	
 	logText += "Drill Layer...Name: " + layer.name + "..." + e;
 	logText += "Increment: " + increment + " " + " floor: " + floor + e;
+	if(zAdjustEnabled) {
+		logText += "Z plane correction for drill ops is disabled" + e;
+	}
 	
 	//depth = depth.toFixed(3);
 	//var increment = 0.0008;
@@ -338,6 +345,7 @@ function convertDxfToGCode(dxfGeo) {
 		var plunge = document.getElementById(layerName.concat("plunge")).value;
 		var floor = document.getElementById(layerName.concat("movementFloor")).value;
 		var stepDown = stepDownRatio * toolDiameter;
+		var zAdjustEnabled = document.getElementById(layerName.concat("zCorrect")).checked;
 		
 		
 		//check that feed and plunge have decimal points
@@ -402,22 +410,22 @@ function convertDxfToGCode(dxfGeo) {
 		
 		switch(dxfGeo.layers[process_order[layer].index].type) {
 		case "LINE":
-			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, toolDiameter);
+			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, zAdjustEnabled);
 			fileText += data[0];
 			logText += data[1];
 			break;
 		case "LWPOLYLINE":
-			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, toolDiameter);
+			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, zAdjustEnabled);
 			fileText += data[0];
 			logText += data[1];
 			break;
 		case "POLYLINE":
-			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, toolDiameter);
+			data = processLines(dxfGeo.layers[process_order[layer].index], depth, stepDown, floor, feed, plunge, zAdjustEnabled);
 			fileText += data[0];
 			logText += data[1];
 			break;
 		case "CIRCLE":
-			data = processCircles(dxfGeo.layers[process_order[layer].index], depth, floor, increment, feed, plunge);
+			data = processCircles(dxfGeo.layers[process_order[layer].index], depth, floor, increment, feed, plunge, zAdjustEnabled);
 			fileText += data[0];
 			logText += data[1];
 			break;
