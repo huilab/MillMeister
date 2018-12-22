@@ -5,7 +5,7 @@
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 // Based on convertumill2gcode by Phil Duncan
 
-const VERSION_NAME = "MillMeister Version 1.2.1";
+const VERSION_NAME = "MillMeister Version 1.2.3";
 
 var gCodeBlob = null;
 var gCodeFileName = null;
@@ -24,43 +24,56 @@ var demoFileName = "data/demo.dxf";
 var gCodeViewDiv = document.getElementById("gCodeView");
 var gCodeGuiDiv = document.getElementById("gcode-gui");
 
-var saveBlob = (function () {
-	var a = document.createElement("a");
-	document.body.appendChild(a);
-	a.style = "display: none";
-	return function (blob, fileName) {
-		var url = window.URL.createObjectURL(blob);
-		a.href = url;
-		a.download = fileName;
-		a.click();
-		window.URL.revokeObjectURL(url);
-	};
-})
+/*
+6000 revolutions / min * 2 flutes = 12,000 cuts / min
+
+if( 300 mm / min )
+	 25 micron cuts (.001”chip load)
+
+if( 200 mm / min )
+	16 micron cuts (~0.00066” chip load)
+
+If (150mm / min)
+	12.5 micron cuts  (~0.0005” chip load)
+
+If (120mm / min)
+	10 micron cuts
+
+If ( 100 mm /min )
+	8.33 micron cuts (~0.00033” chip load)
+
+If ( 50 mm /min )
+	4.16 micron cuts (~0.00016” chip load)
+
+If ( 10 mm /min )
+	0.83 micron cuts (~0.00003” chip load)
+
+*/
 
 var speeds = {
 	"COC" : [
-	[0.05,	50,		20	],
-	[0.075,	75,		30	],
-	[0.1,	120,	60	],
-	[0.15,	150,	80	],
-	[0.2,	200,	100	],
-	[0.5,	300,	200	],
-	[1.0,	400,	300	],
-	[2.0,	600,	400	]],
+	[0.05,	6000,	50,		20	],
+	[0.075,	6000,	75,		30	],
+	[0.1,		6000,	120,	60	],
+	[0.15,	6000,	150,	80	],
+	[0.2,		6000,	200,	100	],
+	[0.5,		6000,	300,	200	],
+	[1.0,		6000,	400,	300	],
+	[2.0,		6000,	600,	400	]],
 	"COP" : [
-	[0.05,100,60	],
-	[0.1,150,80		],
-	[0.2,200,100	],
-	[0.5,300,200	],
-	[1.0,400,300	],
-	[2.0,600,400	]],
+	[0.05,	6000,	100,	60	],
+	[0.1,		6000,	150,	80	],
+	[0.2,		6000,	200,	100	],
+	[0.5,		6000,	300,	200	],
+	[1.0,		6000,	400,	300	],
+	[2.0,		6000,	600,	400	]],
 	"PMMA" : [
-	[0.05,50,40		],
-	[0.1,80,60		],
-	[0.2,100,80		],
-	[0.5,200,150	],
-	[1.0,300,200	],
-	[2.0,400,300	]]
+	[0.05,	6000,	50,		40	],
+	[0.1,		6000,	80,		60	],
+	[0.2,		6000,	100,	80	],
+	[0.5,		6000,	200,	150	],
+	[1.0,		6000,	300,	200	],
+	[2.0,		6000,	400,	300	]]
 };
 
 
@@ -118,12 +131,13 @@ function fillSubstrates( speeds ) {
 
 function fillFeedsSpeeds(speeds) {
 	var output = ["<table>"];
-	output.push("<th>Tool Dia. [mm]</th><th>Feed [mm/min]</th><th>Speed [mm/min]</th>");
+	output.push("<th>Tool Diameter [mm]</th><th>Speed [RPM]</th><th>Feed Rate [mm/min]</th><th>Plunge Rate [mm/min]</th>");
 	Object.entries(speeds).forEach(
 		([ key, value ]) => {
 			if( key == selectedSubstrate ) {
 				for ( var i = 0; i < value.length; i++ ) {
 					output.push("<tr>");
+					// RPM, Feed, Plunge
 					for ( var j = 0; j < value[i].length; j++ ) {
 						output.push("<td>" , value[i][j] , "</td>");
 					}
@@ -401,6 +415,17 @@ function openJobInfoFromText(jobInfo) {
 	textPreview.innerHTML = jobInfo;//JSON.stringify(gcode, null, 4);
 }
 
+function saveBlob(b, n) {
+	var a = document.createElement("a");
+	document.body.appendChild(a);
+	a.style = "display: none";
+	var url = window.URL.createObjectURL(b);
+	a.href = url;
+	a.download = n;
+	a.click();
+	window.URL.revokeObjectURL(url);
+}
+
 function saveGcodeFile() {
 	if(gCodeBlob != null && gCodeFileName != null) {
 		saveBlob(gCodeBlob, gCodeFileName);
@@ -418,6 +443,9 @@ function saveUserInfo() {
 		var temp = document.getElementById(elementId).value;
 		localStorage.setItem(itemName, temp);
 	}
+
+
+
 	saveInfo("opNum","inputOperationNumber");
 	saveInfo("name","inputName");
 	saveInfo("pi","inputPI");

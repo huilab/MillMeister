@@ -16,8 +16,10 @@ function buildTable(dxfGeo){
 		var tool = guessToolType(layerName);
 		var toolDiameter = guessToolDiameter(layerName);
 		var depth = guessDepth(layerName, maxDepth);
-		var feed = guessFeedSpeed(toolDiameter, 1, 100.0);
-		var plunge = guessFeedSpeed(toolDiameter, 2, 50.0);
+		// Table format: Diameter, RPM, Feed, Plunge
+		var speed = guessFeedSpeed(toolDiameter, 1, 100.0);
+		var feed = guessFeedSpeed(toolDiameter, 2, 100.0);
+		var plunge = guessFeedSpeed(toolDiameter, 3, 50.0);
 		
 		//set the processing order to zero if the layer is not enabled
 		//if the layer is enabled, increment the number of layers
@@ -38,7 +40,7 @@ function buildTable(dxfGeo){
 
 		tableText+=generateTableRow(
 			opOrder, dxfGeo.layers[i], tool, 
-			toolDiameter, depth, feed, plunge);
+			toolDiameter, depth, speed, feed, plunge);
 			tableText +="</tr>";
 
 
@@ -46,7 +48,7 @@ function buildTable(dxfGeo){
 	return tableText;
 };
 //function generateTableRow(opOrder, layer, type, color, layerName, tool, toolDiameter, depth, feed, plunge) {
-function generateTableRow(opOrder, layer, tool, toolDiameter, depth, feed, plunge) {
+function generateTableRow(opOrder, layer, tool, toolDiameter, depth, speed, feed, plunge) {
 	var layerName = layer.name;
 	var type = layer.type;
 	var color = layer.color;
@@ -117,7 +119,7 @@ function generateTableRow(opOrder, layer, tool, toolDiameter, depth, feed, plung
 
 	//col 11
 	text+="<td><input type=\"number\" name=\""+ layerName.concat("rpm") +
-	"\" id=\""+layerName.concat("rpm") + "\" value=" + 6000 + "></td>";
+	"\" id=\""+layerName.concat("rpm") + "\" value=" + speed + "></td>";
 
 	//col 12 spindle direction is CW or CCW TK TODO: add support for CCW tools
 	text+="<td>CW</td>";

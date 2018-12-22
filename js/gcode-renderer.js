@@ -1,3 +1,5 @@
+// G-code toolpath simulation
+
 function findExtents(scene) { 
 	for(var child of scene.children) {
 		var minX, maxX, minY, maxY;
@@ -80,55 +82,92 @@ function createGCodeScene(parent) {
 	// specify length in pixels in each direction
 	//var axes = new THREE.AxisHelper(100);
 	//scene.add( axes );
-	
+
+
+  // add the substrate in the scene
+  var substrateLength = document.getElementById("inputPartExtentsX").value;
+  var substrateWidth = document.getElementById("inputPartExtentsY").value;
+  var substrateHeight = document.getElementById("inputSubstrateThickness").value;
+  var substrateGeo = new THREE.BoxGeometry( substrateLength, substrateWidth, substrateHeight );
+  var substrateMat = new THREE.MeshBasicMaterial( {color: 0x00ff00, transparent:true, opacity:0.5 } );
+  var substrateBox = new THREE.Mesh( substrateGeo, substrateMat );
+
+  substrateBox.position.set(substrateLength/2, substrateWidth/2, -substrateHeight/2);
+  scene.add( substrateBox );
+
+
+  // add camera controls GUI
+  var gcodeViewGui = new dat.GUI( { autoPlace: false } );
+  var myContainer = document.getElementById('gcode-gui');
+  myContainer.appendChild(gcodeViewGui.domElement);
+  //gcodeViewGui.domElement.id = "gcode-gui";
+  var gui_controls = {
+    reset: function() {
+      camera.position.x = 0;
+      camera.position.y = -50;
+      camera.position.z = 50;
+      camera.lookAt(scene.position);
+    }
+  };
+
+  //var gcodeViewGui = new dat.GUI( );
+  //var  = gcodeViewGui.addFolder("Substrate");
+  gcodeViewGui.add( gui_controls, "reset" ).name("Reset camera");
+  gcodeViewGui.add( substrateBox, 'visible' ).name("Show substrate");
+
+  // create camera controls
+  // Trackball controls works well with an animation loop, but doesn't update nicely on change events
+  // Orbit controls (used for 2d dxf graphics) works with change events to save CPU
   
+  // /*
   var controls = new THREE.TrackballControls(camera, parent);
   controls.screen.width = width;
   controls.screen.height = height;
-  //controls.noPan = true;
-  //controls.dynamicDampingFactor = 0.15;
+  controls.dynamicDampingFactor = 0.5;
+  controls.panSpeed = 1.2;
+  controls.rotateSpeed = 2.4;
+  controls.zoomSpeed = 1.2;
+  const fps = 1000/50;
+  // */
+  /*
+  var controls = new THREE.OrbitControls( camera, parent );
+  */
 
+renderer.setClearColor(0xffffff, 1);
 
-var substrateLength = document.getElementById("inputPartExtentsX").value;
-var substrateWidth = document.getElementById("inputPartExtentsY").value;
-var substrateHeight = document.getElementById("inputSubstrateThickness").value;
-var substrateGeo = new THREE.BoxGeometry( substrateLength, substrateWidth, substrateHeight );
-var substrateMat = new THREE.MeshBasicMaterial( {color: 0x00ff00, transparent:true, opacity:0.5 } );
-var substrateBox = new THREE.Mesh( substrateGeo, substrateMat );
-
-//add the substrate geo to the scene
-substrateBox.position.set(substrateLength/2, substrateWidth/2, -substrateHeight/2);
-scene.add( substrateBox );
-
-
-var gcodeViewGui = new dat.GUI( { autoPlace: false } );
-var myContainer = document.getElementById('gcode-gui');
-myContainer.appendChild(gcodeViewGui.domElement);
-//gcodeViewGui.domElement.id = "gcode-gui";
-var gui_controls = {
-  reset: function() {
-    camera.position.x = 0;
-    camera.position.y = -50;
-    camera.position.z = 50;
-    camera.lookAt(scene.position);
-  }
+/* // Callback-style rendering (Orbit controls)
+// function to redraw the scene
+this.renderCallback = function() {
+  console.log("rendering");
+  renderer.render(scene, camera);
 };
 
-//var gcodeViewGui = new dat.GUI( );
-//var  = gcodeViewGui.addFolder("Substrate");
-gcodeViewGui.add( gui_controls, "reset" ).name("Reset camera");
-gcodeViewGui.add( substrateBox, 'visible' ).name("Show substrate");
+// attach an event listener to only render on change
+controls.addEventListener('change', this.renderCallback);
 
-	
+// start rendering
+this.renderCallback();
+*/
 
-  // Action!
-  function render() {
+ // animation loop style rendering (Trackball controls)
+  function renderLoop() {
+    // TK check if camera has changed and
+    // TK skip rendering if it's the same
     controls.update();
     renderer.render(scene, camera);
-    renderer.setClearColor(0xffffff, 1);
-    requestAnimationFrame(render); // And repeat...
+    
+   // reduce cpu use by limiting to 50 fps
+   // can do better by only rendering when updated
+   setTimeout(function() {
+     requestAnimationFrame(renderLoop); // only render when browser says so
+
+   }, fps);
+
+    //requestAnimationFrame(render); // And repeat...
   }
-  render();
+ 
+  renderLoop(); //start rendering loop
+
 
   // Fix coordinates up if window is resized.
   $(window).on("resize", function() {
@@ -139,7 +178,8 @@ gcodeViewGui.add( substrateBox, 'visible' ).name("Show substrate");
     camera.updateProjectionMatrix();
     
     controls.screen.width = width;
-  	controls.screen.height = height;
+    controls.screen.height = height;
+    console.log("gcode scene resized");
   });
   console.log("gcode scene created");
   return scene;

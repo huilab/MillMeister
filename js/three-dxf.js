@@ -221,11 +221,15 @@ var ThreeDxf;
         controls.zoomSpeed = 3;
 
 
+        // function to redraw the scene
         this.render = function() {
             renderer.render(scene, camera);
         };
 
+        // attach an event listener to only render on change
         controls.addEventListener('change', this.render);
+
+        // start rendering
         this.render();
 
         $parent.on('click', function(event) {

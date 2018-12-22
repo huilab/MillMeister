@@ -6,245 +6,16 @@
 // It is loosely based on CONVERT MICROMILL GCODE v 1.5.1 by Phil Duncan
 // Copyright 2017, 2018 Erik Werner, UC Irvine
 
-var warningCount;
+// track warnings
+var warningCount = 0;
+//define escape character once for convenience
+var e = "\r\n";
+// Number of decimal places to include. Hard-coded for now
+var precision = 3;
 
-function zAdjust(vertex, depth) {
-	var adjustedDepth = depth;
-	if(zmap.a !== undefined && zmap.b !== undefined && zmap.c !== undefined ) {
-		console.log("Plane eq:a:", zmap.a, " b:", zmap.b, " c:",  zmap.c);
-		//adjusted.z = z - (0.004 - 0.0000378) * y * 0.00029;
-		//(setq zposp (+ zpos (* a xpos) (* b ypos) c))
-		adjustedDepth = vertex.z + (zmap.a*vertex.x) + (zmap.b*vertex.y) + zmap.c;
-		console.log("Mapped z(",vertex.x,",",vertex.y,"):", depth, " to:", adjustedDepth);
-		return adjustedDepth;
-	}
-	else {
-		console.log("Plane map data is not formatted correctly. Returning...");
-		return depth;
-	}
-}
-
-//calculates a ramp to depth d between two points
-function rampAdjust(x1, y1, x2, y2, depth, feed, plunge) {
-	var e = "\r\n";
-	
-	//ramp into work
-	var adjusted = "G01 X" + x2 + " Y" + y2 + " Z-" + depth+ " F" + plunge + e;
-	//move back to start point
-	adjusted += "G01 X" + x1 + " Y" + y1 + " F" + feed + e;
-	
-	return adjusted;
-}
-
-function distance2D(x1, y1, x2, y2) {
-	return Math.sqrt( ((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1)) );
-}
-
-//TODO: if units are in --> fixed(4), if units are mm --> fixed(3)
-function processLines(layer, depth, stepDown, floor, feed, plunge, zAdjustEnabled) {
-	var currentDepth = 0;
-	var e = "\r\n";
-	
-	var logText = "";
-	var text = "G90" + e;//switch to absolute coordinates
-	
-	logText += "Line Layer...Name: " + layer.name + "..." + e;
-	logText += "Stepdown: " + stepDown + " " + " floor: " + floor + e;
-
-	if(zAdjustEnabled) {
-		logText += "Z plane correction for line ops is disabled" + e;
-	}
-	
-	var object_count = 0;
-	var line_count = 0;
-	var pline_count = 0;
-	var pass_count = 0;
-	
-	var n_objects = layer.contents.length;
-	for(var i = 0; i<n_objects; ++i) {
-		var line = layer.contents[i];
-		/*if(zAdjustEnabled) {
-			var adjustedLine = line;
-			for(var i = 0; i<line.vertices.length; ++i){
-				adjustedLine.vertices[i] = zAdjust(line.vertices[i], depth);
-			}
-			line = adjustedLine;
-		}*/
-		// check what kind of object it is
-		if(line.type == "LINE") {
-			line_count++;
-		}
-		else if(line.type == "LWPOLYLINE") {
-			pline_count++;
-		}
-		else {
-			var errStr = "Error: entity " + i + " of " + n_objects + " is not of type: LINE or LWPOLYLINE. Type = " + line.type;
-			logText += "WARNING: " + errStr + e;
-			console.warn(errStr);
-			warningCount++;
-			continue;
-		}
-		
-		if(line.vertices.length < 2) {
-			var errStr = "Error: entity " + i + " of " + n_objects + " has less than two points.";
-			logText += "WARNING: " + errStr + e;
-			console.warn(errStr);
-			warningCount++
-			break;
-		}
-		
-		// find the first two points
-		var x1 = line.vertices[0].x.toFixed(3);
-		var y1 = line.vertices[0].y.toFixed(3);
-		var x2 = line.vertices[1].x.toFixed(3);
-		var y2 = line.vertices[1].y.toFixed(3);
-		
-		//rapid to start point
-		text += "G00 X"+ x1 + " Y"+ y1 + " Z" + floor + e;
-		//lower tool to surface
-		var surface = 0;
-		/*if(zAdjustEnabled) {
-			surface = zAdjust(line.vertices[0],0);
-		}
-
-		text += "G01 Z" + surface + " F" + plunge + e;*/
-		text += "G01 Z0." + " F" + plunge + e;
-		
-		object_count++;
-		
-		currentDepth = findNextCutDepth(currentDepth, stepDown, depth);
-		
-		//limit the depth of this pass to the stepDown
-		//var firstDepth = Math.min(stepDown, depth);
-		//firstDepth = firstDepth.toFixed(3);
-		//currentDepth = firstDepth.toString();
-		
-		//repeat until the correct depth is reached
-		while(Number(currentDepth) <= Number(depth)) {
-			//console.log("processing polyline depth "+currentDepth);
-			//ramp to this depth using the first line segment
-			//ramp goes to p2 and back to p1
-			text += rampAdjust(x1, y1, x2, y2, currentDepth, feed, plunge);
-			
-			//Ensure G01 and F(feed) are set
-			
-			pass_count++;
-			//now process all line segments of polyline at this depth
-			//starting at p2
-			for(var j = 0; j<line.vertices.length - 1; ++j){
-				//var p1x = line.vertices[j].x.toFixed(3);
-				//var p1y = line.vertices[j].y.toFixed(3);
-				var p2x = line.vertices[j+1].x.toFixed(3);
-				var p2y = line.vertices[j+1].y.toFixed(3);
-				
-				text += "X" + p2x + " Y" + p2y + e;
-				
-			}
-			
-			//if polyline is closed, go back to the start
-			if(layer.contents[i].shape == true) {
-				text += "X" + x1 + " Y" + y1 + e;
-			}
-			
-			//raise the tool
-			text += "G01 Z" + floor + e;
-			
-			if(currentDepth < depth) {
-				//go to the next depth
-				var lastDepth = currentDepth;
-				currentDepth = findNextCutDepth(currentDepth, stepDown, depth);
-				//return to start point for next pass
-				text += "G00 X"+ x1 + " Y"+ y1 + e;
-				
-				//lower tool to surface
-				//text += "G01 Z0." + " F" + plunge + e;
-				//lower tool to the last cut depth
-				text += "G01 Z-" + lastDepth + " F" + plunge + e;
-			}
-			else {
-				//the current depth equals the target
-				//rest depth counter and stop this polyline
-				currentDepth = 0;
-				break;
-			}
-			
-			//var nextDepth = Number(currentDepth) + stepDown;
-			//nextDepth = nextDepth.toFixed(3);
-			//currentDepth = nextDepth.toString();
-		}
-	}
-	logText += "Processed layer with " + object_count + " objects (" + line_count;
-	logText += " lines and " + pline_count + " polylines) in " + pass_count/object_count + " passes" + e;
-	return [text, logText];
-}
-
-function findNextCutDepth(currentDepth, stepDown, target) {
-	var nextDepth = Number(currentDepth) + Number(stepDown);
-	//console.log("polyline::current depth: "+currentDepth+" next depth " + nextDepth);
-	if(nextDepth < target) {
-		return Number(nextDepth).toFixed(3);
-	}
-	else {
-		return Number(target).toFixed(3);
-	}
-}
-
-
-/**
- * Generates g-code for drill operations
- * G83 Peck drilling canned cycle (Group 09) syntax:
- * F feedrate in [units]/min
- * P dwell time after last peck
- * Q cut depth, always incremental
- * R position of the R plane (above the part)
- * X x-axis location of the hole
- * Y y-axis location of the hole
- * Z position of the z-axis at the bottom of the hole
- * 
- * @param {*} layer 
- * @param {*} depth 
- * @param {*} floor 
- * @param {*} feed 
- */
-function processCircles(layer, depth, floor, increment, plunge, zAdjustEnabled) {
-	var logText = "";
-	var text = "";
-	var e = "\r\n";
-	
-	logText += "Drill Layer...Name: " + layer.name + "..." + e;
-	logText += "Increment: " + increment + " " + " floor: " + floor + e;
-	if(zAdjustEnabled) {
-		logText += "Z plane correction for drill ops is disabled" + e;
-	}
-	
-	//depth = depth.toFixed(3);
-	//var increment = 0.0008;
-	//var dwell = 1.000;
-	
-	var object_count = 0;
-	
-	text += "G90" + e;//switch to absolute coordinates
-	for(var i=0; i< layer.contents.length; ++i){
-		var circle = layer.contents[i];
-		 //move to circle point
-		text += "G00 X"+ circle.center.x.toFixed(3)+" Y"+circle.center.y.toFixed(3) + e;
-		//rapid to movement floor 
-		text += "G00 Z" + floor + e;
-		//and start canned cycle
-		text += "G83 Z-"+ depth + " F"+ plunge + " R" + floor + " Q" + increment + e;
-		//bore out the hole one more time
-		text += "G01 Z-"+depth + " F"+ plunge + e;
-		text += "G01 Z"+floor + " F"+ plunge + e;
-		object_count++;
-	}
-	logText += "Processed " + object_count + " circles" + e;
-	return [text, logText];
-}
+//TK check these^^ they are reproduced
 
 function convertDxfToGCode(dxfGeo) {
-	
-	//define escape character for convenience
-	var e = "\r\n";
 	
 	//reset warning counter
 	warningCount= 0;
@@ -276,8 +47,7 @@ function convertDxfToGCode(dxfGeo) {
 		zRef = zRef + ".";
 	}
    
-	
-	//start the gcode file
+	//start writing the gcode string
 	var fileText = "%"+ e + fileName + e;
 	fileText += "(Part Name: " + partName + ")" + e;
 	fileText += "(----------------------------)" + e;
@@ -300,14 +70,16 @@ function convertDxfToGCode(dxfGeo) {
 	+ "(OPTIONAL PROGRAM STOP)" + e + "M01" + e
 	+ "(WORKPLANE G" + workPlane + ")" + e + "G" + workPlane + e;
 
-	 //start a log file
-	fileName += ".nc";
+	//start a log file
 	var logName = "Job Info " + fileName + ".txt";
 	var logText = "Part Name: " + partName + e;
 	logText += "File Name: " + fileName + e;
 	logText += "Generated by " + VERSION_NAME + e;
 	logText += "Substrate: " + substrateName + " (" + substrateThickness + ") [mm]" + e;
 	logText += "Date: " + date + e;
+
+	// wait until done using the filename string to add the file type
+	fileName += ".nc";
 	
 	//Sort layers based on processing order
 	//If multiple layers have the same processing order, the first one
@@ -352,6 +124,8 @@ function convertDxfToGCode(dxfGeo) {
 		var floor = document.getElementById(layerName.concat("movementFloor")).value;
 		var stepDown = stepDownRatio * toolDiameter;
 		var zAdjustEnabled = document.getElementById(layerName.concat("zCorrect")).checked;
+		var originX = document.getElementById("inputPartOriginX").value;
+		var originY = document.getElementById("inputPartOriginY").value;
 		
 		
 		//check that feed and plunge have decimal points
@@ -431,7 +205,7 @@ function convertDxfToGCode(dxfGeo) {
 			logText += data[1];
 			break;
 		case "CIRCLE":
-			data = processCircles(dxfGeo.layers[process_order[layer].index], depth, floor, increment, feed, plunge, zAdjustEnabled);
+			data = processCircles(dxfGeo.layers[process_order[layer].index], depth, floor, increment, plunge, zAdjustEnabled);
 			fileText += data[0];
 			logText += data[1];
 			break;
@@ -465,4 +239,349 @@ function convertDxfToGCode(dxfGeo) {
 	logText += warningString + e;
 	console.log(warningString);
 	return [fileName, fileText, logName, logText];
+}
+
+
+
+function checkType(o, t) {
+	if(typeof(o) == t) {
+		return true;
+ }
+ else {
+	 console.warn(0 + " is not a " + t);
+	 return false;
+ }
+}
+
+/**
+ * returns a floating point number with the change in z value for a given (x,y) coordinate
+ * @param {Number} x x-coordinate of the point to map
+ * @param {Number} y y-coordinate of the point to map
+ * @param {Number} z x-coordinate of the point to map. Only used for console logging
+ * 
+ * Adjusted depth (negative number) = -1 * (original position - dz)
+ * 
+ * (princ (strcat "Plane eq:a:" (rtos a) " -- b" (rtos b) " --c"  (rtos c) "\n"))
+				;(setq zposp (+ zpos (- 0.004 (- 0.0000378 (* ypos 0.00029))))
+						(setq zposp (+ zpos (* a xpos) (* b ypos) c))
+
+ */
+function zAdjust(/* Number */x, /* Number */y, /* Number */z) {
+	var dz = 0;
+	checkType(x, "number");
+	checkType(y, "number");
+	checkType(z, "number");
+
+	if(zmap.a !== undefined && zmap.b !== undefined && zmap.c !== undefined ) {
+		dz = ( zmap.a * Number(x) ) + ( zmap.b * Number(y)) + zmap.c;
+		console.log("Plane eq: (a,b,c): (", zmap.a, ",", zmap.b, ",",  zmap.c, ") Mapped z(", x, ",", y, "):", z, " to:", (z + dz), " dz:", dz);
+	}
+	else {
+		console.log("Plane map data is not formatted correctly. Returning...");
+	}
+	return dz;
+}
+
+/** 
+ * returns a string with gcode to ramp to depth d between two points (x1, y1) and (x2, y2)
+ * @param {string} x1 x-coordinate of the first point
+ * @param {string} y1 xy-coordinate of the first point
+ * @param {string} x2 x-coordinate of the second point
+ * @param {string} y2 y-coordinate of the second point
+ * @param {string} depth depth to finish at 
+ * @param {string} feed feed rate in [units]/min
+ * @param {string} plunge plunge rate in [units]/min
+ */
+function rampAdjust(/* string */x1, /* string */y1, /* string */x2, /* string */y2, 
+	/* string */depth, /* string */feed, /* string */plunge) {
+	checkType(x1, "string");
+	checkType(y1, "string");
+	checkType(x2, "string");
+	checkType(y2, "string");
+	checkType(depth, "string");
+	checkType(feed, "string");
+	checkType(plunge, "string");
+
+	//ramp into work
+	var rampStr = "G01 X" + x2 + " Y" + y2 + " Z-" + depth + " F" + plunge + e;
+	
+	return rampStr;
+}
+
+// returns the euclidean distance between two points (x1, y1) and (x2, y2)
+function distance2D(x1, y1, x2, y2) {
+	return Math.sqrt( ((x2-x1)*(x2-x1)) + ((y2-y1)*(y2-y1)) );
+}
+
+// TODO: if units are in --> fixed(4), if units are mm --> fixed(3)
+/** 
+ * Generates gcode for all lines and polylines in the layer
+ * @param {string} layer name of the layer
+ * @param {number} depth target depth for layer features
+ * @param {number} stepDown amount to step each pass in [units]/min
+ * @param {number} floor return distance above work between cuts
+ * @param {number} feed feed rate in [units]/min
+ * @param {number} plunge plunge rate in [units]/min
+ * @param {boolean} zAdjustEnabled flag if z-correction should be applied
+ */
+function processLines(/* Object */layer, depth, stepDown, floor, feed, plunge, zAdjustEnabled) {
+	checkType(layer, "string");
+	checkType(depth, "number");
+	checkType(stepDown, "number");
+	checkType(floor, "number");
+	checkType(feed, "number");
+	checkType(plunge, "number");
+	checkType(zAdjustEnabled, "boolean");
+
+	var currentDepth = 0;
+	var logText = "(Line Layer) Name: " + layer.name + "..." + e;
+	logText += "Stepdown: " + stepDown + " " + " floor: " + floor + e;
+
+	if( zAdjustEnabled ) {
+		logText += "Using Z plane correction" + e;
+	}
+	var gcodeStr = "G90" + e; //switch to absolute coordinates
+	
+	var object_count = 0;
+	var line_count = 0;
+	var pline_count = 0;
+	var pass_count = 0;
+	
+	var n_objects = layer.contents.length;
+	for(var i = 0; i<n_objects; ++i) {
+		var line = layer.contents[i];
+
+		// check what kind of object the line is
+		if(line.type == "LINE") {
+			line_count++;
+		}
+		else if(line.type == "LWPOLYLINE") {
+			pline_count++;
+		}
+		else {
+			var errStr = "Error: entity " + i + " of " + n_objects + " is not of type: LINE or LWPOLYLINE. Type = " + line.type;
+			logText += "WARNING: " + errStr + e;
+			console.warn(errStr);
+			warningCount++;
+			continue;
+		}
+		
+		// check that the line has at least two points
+		if(line.vertices.length < 2) {
+			var errStr = "Error: entity " + i + " of " + n_objects + " has less than two points.";
+			logText += "WARNING: " + errStr + e;
+			console.warn(errStr);
+			warningCount++
+			break;
+		}
+		
+		// find the first two points
+		var x1 = Number(line.vertices[0].x);
+		var y1 = Number(line.vertices[0].y);
+		var x1str = x1.toFixed(precision);
+		var y1str = y1.toFixed(precision);
+
+		var x2 = Number(line.vertices[1].x);
+		var y2 = Number(line.vertices[1].y);
+		var x2str =x2.toFixed(precision);
+		var y2str = y2.toFixed(precision);
+		
+		// rapid to start point
+		gcodeStr += "G00 X"+ x1str + " Y"+ y1str + " Z" + floor + e;
+
+		// lower tool to surface
+		var surface = 0;
+		if(zAdjustEnabled) {
+			surface += zAdjust(x1, y1, 0);
+			gcodeStr += "G01 Z" + surface.toFixed(precision) + " F" + plunge + e;
+		}
+		else {
+			gcodeStr += "G01 Z0." + " F" + plunge + e;
+		}
+		
+		object_count++;
+		
+		// find the first depth to cut
+		// currentDepth, stepDown, and depth are all Numbers
+		currentDepth = findNextCutDepth( Number(currentDepth), Number(stepDown), Number(depth) );
+		
+		// limit the depth of this pass to the stepDown
+		// var firstDepth = Math.min(stepDown, depth);
+		// firstDepth = firstDepth.toFixed(3);
+		// currentDepth = firstDepth.toString();
+		
+		// repeat until the correct depth is reached
+		while( Number(currentDepth) <= Number(depth) ) {
+			//console.log("processing polyline depth "+currentDepth);
+			//ramp to this depth using the first line segment
+			//ramp goes to p2 and back to p1
+			if( zAdjustEnabled ) {
+				gcodeStr += rampAdjust(x1str, y1str, x2str, y2str, ( currentDepth - zAdjust(x2, y2, currentDepth) ).toFixed(precision) , feed, plunge);
+				//move back to start point
+				gcodeStr += "G01 X" + x1str + " Y" + y1str + " Z-" + ( currentDepth - zAdjust(x1, y1, currentDepth) ).toFixed(precision) + " F" + feed + e;
+			}
+			else {
+				gcodeStr += rampAdjust(x1str, y1str, x2str, y2str, currentDepth.toFixed(precision), feed, plunge);
+				//move back to start point
+				gcodeStr += "G01 X" + x1str + " Y" + y1str + " F" + feed + e;
+			}
+			//TKTKTK
+			//Ensure G01 and F(feed) are set
+			
+			pass_count++;
+			//now process all line segments of polyline at this depth
+			//starting at p2
+			for(var j = 0; j<line.vertices.length - 1; ++j){
+				//var p1x = line.vertices[j].x.toFixed(3);
+				//var p1y = line.vertices[j].y.toFixed(3);
+				
+				var p2x = Number(line.vertices[j+1].x);
+				var p2y = Number(line.vertices[j+1].y);
+				var pl2xstr = p2x.toFixed(3);
+				var pl2ystr = p2y.toFixed(3);
+				
+				if(zAdjustEnabled) {
+					gcodeStr += "X" + pl2xstr + " Y" + pl2ystr + " Z-" + ( currentDepth - zAdjust(p2x, p2y, currentDepth) ).toFixed(precision) + e;
+				}
+				else {
+					gcodeStr += "X" + pl2xstr + " Y" + pl2ystr + e;
+				}
+			}
+			
+			//if polyline is closed, go back to the start
+			if(layer.contents[i].shape == true) {
+				if(zAdjustEnabled) {
+					gcodeStr += "X" + x1str + " Y" + y1str + "Z-" + (currentDepth - zAdjust(x1, y1, currentDepth)).toFixed(precision) + e;
+				}
+				else {
+					gcodeStr += "X" + x1str + " Y" + y1str + e;
+				}
+			}
+			
+			//raise the tool
+			gcodeStr += "G01 Z" + floor + e;
+			
+			if( currentDepth < Number(depth) )  {
+				//go to the next depth
+				var lastDepth = currentDepth;
+				currentDepth = findNextCutDepth( Number(currentDepth), Number(stepDown), Number(depth) );
+				//return to start point for next pass
+				gcodeStr += "G00 X"+ x1str + " Y"+ y1str + e;
+				
+				//lower tool to surface
+				//text += "G01 Z0." + " F" + plunge + e;
+				//lower tool to the last cut depth
+				if(zAdjustEnabled) {
+					gcodeStr += "G01 Z-" + (lastDepth - zAdjust(x1, y1, lastDepth)).toFixed(precision) + " F" + plunge + e;
+				}
+				else {
+					gcodeStr += "G01 Z-" + lastDepth.toFixed(precision) + " F" + plunge + e;
+				}
+			}
+			else {
+				//the current depth equals the target
+				//rest depth counter and stop this polyline
+				currentDepth = 0;
+				break;
+			}
+			
+			//var nextDepth = Number(currentDepth) + stepDown;
+			//nextDepth = nextDepth.toFixed(3);
+			//currentDepth = nextDepth.toString();
+		}
+	}
+	logText += "Processed layer with " + object_count + " objects (" + line_count;
+	logText += " lines and " + pline_count + " polylines) in " + pass_count/object_count + " passes" + e;
+	return [gcodeStr, logText];
+}
+
+
+/**
+ * Note: returns a string with the next depth
+ * @param {Number} depth the current depth
+ * @param {Number} step the amount to step down each cut
+ * @param {Number} target the final depth of cut
+ */
+function findNextCutDepth(/* Number */d1, /* Number */step, /* Number */target) {
+
+	checkType(d1, "number");
+	checkType(step, "number");
+	checkType(target, "number");
+
+	var nextDepth = Number(d1) + Number(step);
+	//console.log("polyline::current depth: "+currentDepth+" next depth " + nextDepth);
+	return nextDepth < target ? nextDepth : target;
+	
+	/*if(nextDepth < target) {
+		return Number(nextDepth).toFixed(3);
+	}
+	else {
+		return Number(target).toFixed(3);
+	}*/
+}
+
+
+/**
+ * Generates g-code for drill operations
+ * G83 Peck drilling canned cycle (Group 09) syntax:
+ * F feedrate (plunge)in [units]/min
+ * P dwell time after last peck
+ * Q cut depth, always incremental
+ * R position of the R plane (above the part)
+ * X x-axis location of the hole
+ * Y y-axis location of the hole
+ * Z position of the z-axis at the bottom of the hole
+ * 
+ * @param {*} layer 
+ * @param {*} depth 
+ * @param {*} floor 
+ * @param {*} feed 
+ */
+function processCircles(layer, depth, floor, increment, plunge, zAdjustEnabled) {
+	checkType(layer, "string");
+	checkType(depth, "number");
+	checkType(floor, "number");
+	checkType(increment, "number");
+	checkType(plunge, "number");
+	checkType(zAdjustEnabled, "boolean");
+
+	var logText = "";
+	var text = "";
+	var e = "\r\n";
+	
+	logText += "(Drill Layer) Name: " + layer.name + "..." + e;
+	logText += "Increment: " + increment + " " + " floor: " + floor + e;
+	if( zAdjustEnabled ) {
+		logText += "Using Z plane correction" + e;
+	}
+	
+	//depth = depth.toFixed(3);
+	//var increment = 0.0008;
+	//var dwell = 1.000;
+	
+	var object_count = 0;
+	
+	text += "G90" + e;//switch to absolute coordinates
+	
+	for(var i=0; i< layer.contents.length; ++i){
+		var circle = layer.contents[i];
+		//move to circle point
+		var x = circle.center.x.toFixed(3);
+		var y = circle.center.y.toFixed(3);
+		var thisDepth = depth;
+		if(zAdjustEnabled) {
+			thisDepth -= zAdjust(x, y, depth);
+		}
+		text += "G00 X"+ x +" Y"+ y + e;
+		//rapid to movement floor 
+		text += "G00 Z" + floor + e;
+		//and start canned cycle
+		text += "G83 Z-" + thisDepth + " F"+  plunge + " R" + floor + " Q" + increment + e;
+		//bore out the hole one more time
+		text += "G01 Z-" + thisDepth + " F" + plunge + e;
+		text += "G01 Z" + floor + " F" + plunge + e;
+		object_count++;
+	}
+	logText += "Processed " + object_count + " circles" + e;
+	return [text, logText];
 }

@@ -200,12 +200,6 @@
 						</div><!--row-->
 						<div class="row">
 							<div class="col-md-2">
-								<button type="button" class="btn btn-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseFeedSpeedInfoTextPreview">Preview Feeds/Speeds</button>
-									<div id="collapseFeedSpeedInfoTextPreview" class="collapse scroll-area">
-										<pre id="feedSpeedInfoTextPreview" stlye="font-family: monospace;"></pre>
-									</div>
-							</div>
-							<div class="col-md-2">
 								<label for="inputPartExtents" class="col-form-label">Part extents:</label>
 									<input type="number" class="form-control" name="partExtentsX" id="inputPartExtentsX" value="75.5" min="0">
 									<input type="number" class="form-control" name="partExtentsY" id="inputPartExtentsY" value="25.5" min="0">
@@ -213,30 +207,40 @@
 							</div>
 							<div class="col-md-2">
 								<label for="inputPartOrigin" class="col-form-label">Part origin:</label>
-									<input type="number" class="form-control" name="partOriginX" id="inputPartOriginX" value="0">
-									<input type="number" class="form-control" name="partOriginY" id="inputPartOriginY" value="0">
-									<span class="help-block">(0,0) Coordinates of drawing</span>
+								<input type="number" class="form-control" name="partOriginX" id="inputPartOriginX" value="0">
+								<input type="number" class="form-control" name="partOriginY" id="inputPartOriginY" value="0">
+								<span class="help-block">(0,0) Coordinates of drawing</span>
 							</div>
 							<div class="col-md-2">
-							
 								<label for="inputIncludeM01">Include Option Stops
 								<input type="checkbox" id="inputIncludeM01" checked></label>
 								<span class="help-block">Inserts M01 after each tool change</span>
+								
+							</div>
+							<div class="col-md-2">
 								<label for="inputBlockNumbers">Number Steps
 								<input type="checkbox" id="inputBlockNumbers" checked></label>
 								<span class="help-block">Inserts line numbers before each tool change</span>
 							</div>
 							<div class="col-md-2">
 								<label for="inputStepdown" class="col-form-label">Step down ratio:</label>
-									<input type="number" class="form-control" name="stepDown" id="inputStepdown" value="0.5" min="0.1" max="1">
+								<input type="number" class="form-control" name="stepDown" id="inputStepdown" value="0.5" min="0.1" max="1">
 								<span class="help-block">Stepdown (percent of tool diameter)</span>
 							</div>
 							<div class="col-md-2">
-							<label for="inputZRef" class="col-form-label">Return to reference Z:</label>
-									<input type="number" class="form-control" name="zRef" id="inputZRef" value="75.0" min="0">
+								<label for="inputZRef" class="col-form-label">Reference Z:</label>
+								<input type="number" class="form-control" name="zRef" id="inputZRef" value="75.0" min="0">
+								<span class="help-block">Height to move above work before returning to the origin</span>
 							</div>
 						</div><!--row-->
-						
+						<div class="row">
+							<div class="col-md-12">
+								<button type="button" class="btn btn-outline-info btn-sm btn-block" data-toggle="collapse" data-target="#collapseFeedSpeedInfoTextPreview">Preview Feeds/Speeds</button>
+								<div id="collapseFeedSpeedInfoTextPreview" class="collapse scroll-area">
+									<pre id="feedSpeedInfoTextPreview" stlye="font-family: monospace;"></pre>
+								</div>
+							</div>
+						</div><!--row-->
 						<div class = "row">
 							<div class="table-responsive collapse" id="paramTable">
 								<table class="table-striped table-hover">
