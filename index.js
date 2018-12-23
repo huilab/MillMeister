@@ -401,7 +401,7 @@ function openGCodeFromText(gcode) {
 		gCodeGuiDiv.removeChild(gCodeGuiDiv.firstChild);
 	}
 	// repopulate gCodeViewDiv
-	var scene = createGCodeScene(gCodeViewDiv);
+	var scene = createGCodeScene(gCodeViewDiv, zmap);
 	// create toolpath geo and add to scene
 	createObjectFromGCode(gcode, scene);
 

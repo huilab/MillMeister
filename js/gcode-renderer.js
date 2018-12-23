@@ -14,7 +14,7 @@ function findExtents(scene) {
 	return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY }};
 }
 
-function createGCodeScene(parent) {
+function createGCodeScene(parent, zmap) {
 	var $parent = $(parent);
 	var width = $parent.innerWidth();
 	var height = $parent.innerHeight();
@@ -95,6 +95,21 @@ function createGCodeScene(parent) {
   substrateBox.position.set(substrateLength/2, substrateWidth/2, -substrateHeight/2);
   scene.add( substrateBox );
 
+  // 48" travel = 1176 mm
+  var largerSide = Math.max(substrateLength, substrateWidth);
+  // visualize z-adjustment plane
+  var plane = new THREE.Plane();
+
+  // the plane equation is z = f(x,y) = ax + by + c
+  // p1 let x = 0  y = 0
+  // p2 let x = 100 , y = 0
+  // p3 let x = 0, y = 100
+  plane.setFromCoplanarPoints( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 100 , 0, zmap.a*100 + zmap.c ), new THREE.Vector3( 0, 100, zmap.b*100 + zmap.c ));
+  //plane.setFromCoplanarPoints( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 1, 0, 0 ), new THREE.Vector3( 0, 1, 0 ));
+  plane.translate( new THREE.Vector3( largerSide/2, 0, 0 ) );
+  var planeHelper = new THREE.PlaneHelper( plane, largerSide, 0xffff00 );
+  scene.add( planeHelper );
+
 
   // add camera controls GUI
   var gcodeViewGui = new dat.GUI( { autoPlace: false } );
@@ -114,6 +129,7 @@ function createGCodeScene(parent) {
   //var  = gcodeViewGui.addFolder("Substrate");
   gcodeViewGui.add( gui_controls, "reset" ).name("Reset camera");
   gcodeViewGui.add( substrateBox, 'visible' ).name("Show substrate");
+  gcodeViewGui.add( planeHelper, 'visible' ).name("Show correction plane");
 
   // create camera controls
   // Trackball controls works well with an animation loop, but doesn't update nicely on change events
